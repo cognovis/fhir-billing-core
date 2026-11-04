@@ -1,0 +1,15 @@
+install:
+  - name: sushi
+    version: 3.20.0
+  - name: igpub
+    version: 2.3.1
+  - name: publishtools
+    version: 0.3.7
+build:
+  pipeline:
+    - sushi
+    - shell: bun scripts/check-offline-terminology.mjs
+    - shell: PUBLISHER_JAVA="$(command -v java)" PATH="$PWD/scripts/offline-publisher-bin:$PATH" fhirscripts build ig
+    - shell: bun scripts/fsh-source-fingerprint.mjs record
+    - shell: bun scripts/verify-publisher-qa.mjs
+    - shell: bun scripts/catalog-example-guard.mjs output/package.tgz

@@ -1,0 +1,25 @@
+.DS_Store
+.pytest_cache/
+.venv/
+__pycache__/
+node_modules/
+dist/
+dist-tests/
+*.tsbuildinfo
+fsh-generated/
+output/
+input-cache/
+temp/
+template/
+Requirements-fromNarrative.json
+build-record.yaml
+
+.dolt/
+*.db
+*.gate.lock*
+
+# Dolt is the source of truth; the JSONL export is local only.
+
+.library.lock
+.library.lock.*
+

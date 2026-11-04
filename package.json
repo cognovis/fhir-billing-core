@@ -1,0 +1,27 @@
+{
+  "name": "fhir-billing-core",
+  "version": "0.41.1",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @cognovis/fhir-billing-types && npm run build -w @cognovis/fhir-billing-rules && npm run build -w @cognovis/fhir-billing-engine && tsc -p tsconfig.tests.json",
+    "test": "npm run build && bun test ./dist-tests/tests/*.test.js ./scripts/*.test.mjs",
+    "test:unit": "npm run build && bun test ./dist-tests/tests/core.test.js",
+    "test:integration": "npm run build && bun test ./dist-tests/tests/artifacts.test.js",
+    "fhir:publisher": "cognovis-fhir ig build fhir-billing-core --repository .",
+    "check:engine-manifests": "bun scripts/engine-manifest-guard.mjs",
+    "generate:types": "bun scripts/generate-types.mjs",
+    "verify": "npm test && npm run generate:types && npm run build && bun scripts/verify-release.mjs && node scripts/verify-packed-portability.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "24.3.0",
+    "typescript": "5.9.2"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "Apache-2.0"
+}

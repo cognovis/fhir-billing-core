@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 2,
+  "semanticMajor": 4,
+  "id": "synthetic-dental-window-rules-2026",
+  "rules": [
+    {
+      "id": "scaling-annual-limit",
+      "class": "quantity-limit",
+      "mustUnderstand": true,
+      "effect": "reject",
+      "priority": 1,
+      "parameters": {
+        "selector": { "system": "https://example.invalid/CodeSystem/synthetic-dental-fee", "codes": ["SD-1000"] },
+        "maximum": 1,
+        "countingScope": { "window": "calendar-year", "subject": "patient" }
+      }
+    }
+  ]
+}

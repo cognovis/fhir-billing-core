@@ -1,0 +1,13 @@
+{
+  "package-id": "de.cognovis.fhir.billing.core",
+  "version": "0.34.4",
+  "path": "https://fhir.cognovis.de/billing-core/0.34.4",
+  "status": "release",
+  "first": false,
+  "mode": "working",
+  "sequence": "STU1",
+  "category": "Cognovis FHIR Implementation Guides",
+  "introduction": "Jurisdiction-neutral FHIR R4 contracts for deterministic medical billing rules and their reference evaluator.",
+  "ci-build": "https://fhir.cognovis.de/billing-core",
+  "desc": "FHIR Billing Core (R4)"
+}

@@ -1,0 +1,107 @@
+#!/bin/sh
+set -eu
+
+test -n "${PUBLISHER_JAVA:-}" || {
+    echo "PUBLISHER_JAVA must name the real Java executable." >&2
+    exit 2
+}
+
+publisher_jar=false
+previous_argument=""
+terminology_count=0
+terminology_value=""
+expects_terminology_value=false
+
+for argument in "$@"; do
+    if test "$previous_argument" = "-jar"; then
+        case "$argument" in
+            input-cache/publisher.jar | ./input-cache/publisher.jar | */input-cache/publisher.jar)
+                publisher_jar=true
+                ;;
+        esac
+    fi
+    if test "$expects_terminology_value" = true; then
+        terminology_value="$argument"
+        expects_terminology_value=false
+    else
+        case "$argument" in
+            -tx | --tx)
+                terminology_count=$((terminology_count + 1))
+                expects_terminology_value=true
+                ;;
+            -tx=* | --tx=*)
+                terminology_count=$((terminology_count + 1))
+                terminology_value="${argument#*=}"
+                ;;
+        esac
+    fi
+    previous_argument="$argument"
+done
+
+test "$expects_terminology_value" = false || {
+    echo "Publisher terminology option requires a value." >&2
+    exit 2
+}
+test "$terminology_count" -le 1 || {
+    echo "Publisher terminology option must be provided at most once." >&2
+    exit 2
+}
+
+# Explicit IG Publisher heap ceiling, prepended so it lands before `-jar`.
+# An unbounded Publisher peaked at 16.4 GiB next to a second JVM at 7.1 GiB and
+# cgroup-OOM-killed the shared 24 GiB runner CT 119 on 2026-08-07. The value is
+# the estate ceiling configured once in fhir-management configs/repos.yaml
+# (ig_publisher.max_heap); `cognovis-fhir check publisher-heap` fails when this
+# invocation is unbounded or declares a different value. It is applied only to a
+# real Publisher invocation, so `java -version` probes stay untouched.
+PUBLISHER_MAX_HEAP="-Xmx8g"
+
+# fhirscripts parses `java -version` from the first output line. The JVM
+# prefixes JAVA_TOOL_OPTIONS onto that probe, so strip it here and re-apply
+# headless flags on the Publisher command line only.
+publisher_headless=false
+case "${JAVA_TOOL_OPTIONS:-}" in
+    *"java.awt.headless"*)
+        publisher_headless=true
+        ;;
+esac
+unset JAVA_TOOL_OPTIONS
+
+run_publisher_java() {
+    if test "$publisher_headless" = true; then
+        exec "$PUBLISHER_JAVA" -Djava.awt.headless=true -Dapple.awt.UIElement=true "$@"
+    fi
+    exec "$PUBLISHER_JAVA" "$@"
+}
+
+# fhirscripts 0.29.1 require_min_version("17") parses at most three numeric
+# components and then compares min >= parsed. Homebrew OpenJDK reports
+# 17.0.20.1, which becomes n/a, so report the major the pipeline asks for.
+# The Publisher jar still runs under the real JVM captured in PUBLISHER_JAVA.
+if test "$#" -eq 1 && test "$1" = "-version"; then
+    printf 'openjdk version "17"\n' >&2
+    exit 0
+fi
+
+# Terminology server for Publisher validation. This was `n/a` because the banned
+# public server (see scripts/check-offline-terminology.mjs) timed out often enough
+# to make builds unreliable. That was an availability problem, not a decision to
+# validate without terminology: with no server every required binding is
+# unvalidatable, and unlike warnings those are errors that ignoreWarnings.txt
+# cannot suppress. Attachment.contentType against the MimeType value set is the
+# case that surfaced it. The estate already trusts this server as Aidbox's
+# external hybrid terminology backend.
+PUBLISHER_TX="https://tx.health-samurai.io/fhir"
+
+if test "$publisher_jar" = true; then
+    if test "$terminology_count" -eq 1; then
+        test "$terminology_value" = "$PUBLISHER_TX" || {
+            echo "Publisher terminology policy requires -tx $PUBLISHER_TX." >&2
+            exit 2
+        }
+        run_publisher_java "$PUBLISHER_MAX_HEAP" "$@"
+    fi
+    run_publisher_java "$PUBLISHER_MAX_HEAP" "$@" -tx "$PUBLISHER_TX"
+fi
+
+run_publisher_java "$@"

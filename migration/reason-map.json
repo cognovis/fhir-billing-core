@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "mappings": [
+    {"from": "QUANTITY_CAP_EXCEEDED", "to": "QUANTITY_CAP_EXCEEDED"},
+    {"from": "CODE_EXCLUDED_BY_QUANTITY_CONTROL", "to": "MUTUALLY_EXCLUSIVE_CODE_PRESENT"},
+    {"from": "VALUE_CAP_APPLICABLE", "to": "VALUE_CAP_APPLICABLE"},
+    {"from": "PROCEDURE_CODE_REQUIRED", "to": "COMPANION_CODE_REQUIRED"},
+    {"from": "SOURCE_COVERAGE_INCOMPLETE", "to": "ADMISSION_INCOMPLETE"}
+  ]
+}

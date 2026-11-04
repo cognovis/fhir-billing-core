@@ -1,0 +1,13 @@
+{
+  "from": "0.4.x",
+  "to": "0.41.1",
+  "payloadSchema": 2,
+  "semanticMajor": {
+    "from": 3,
+    "to": 4
+  },
+  "digestCompatibility": "payload-v2-unchanged",
+  "addedRuleClasses": ["minimum-evidence-count"],
+  "predicateMigrations": [],
+  "minimumEvidence": "minimum-evidence-count requires positive safe-integer minimum and source credits; each unique source fact contributes min(rawCount * credit, maximumCredit ?? rawCount * credit), while unavailable facts yield needs-review and malformed or overflowing counts are typed input errors"
+}

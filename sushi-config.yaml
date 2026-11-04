@@ -1,0 +1,44 @@
+id: de.cognovis.fhir.billing.core
+canonical: https://fhir.cognovis.de/billing-core
+name: FHIRBillingCore
+title: FHIR Billing Core (R4)
+description: >-
+  Jurisdiction-neutral FHIR R4 contracts for deterministic medical billing
+  rules and their reference evaluator.
+status: draft
+version: 0.41.1
+date: 2026-10-26
+fhirVersion: 4.0.1
+copyrightYear: 2026+
+copyright: >-
+  Copyright 2026+ cognovis GmbH. Cognovis-authored material is licensed under
+  Apache-2.0; third-party material retains its own terms.
+releaseLabel: release
+license: Apache-2.0
+publisher:
+  name: cognovis GmbH
+  url: https://www.cognovis.de
+  email: info@cognovis.de
+
+parameters:
+  apply-version: false
+  default-version: true
+  no-expansions-files: true
+  special-url:
+    - https://fhir.cognovis.de/billing-core/extension/catalog-definition-digest
+    - https://fhir.cognovis.de/billing-core/extension/configured-rule-members-digest
+    - https://fhir.cognovis.de/billing-core/extension/billing-admission-tenant
+    - https://fhir.cognovis.de/billing-core/extension/billing-admitted-artifact
+    - https://fhir.cognovis.de/billing-core/extension/billing-admitted-configured-rules
+    - https://fhir.cognovis.de/billing-core/extension/billing-admitted-digest
+
+pages:
+  index.md:
+    title: Home
+  license.md:
+    title: License and Third-Party Notices
+
+menu:
+  Home: index.html
+  License: license.html
+  Artifacts: artifacts.html

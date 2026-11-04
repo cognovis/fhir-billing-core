@@ -1,0 +1,30 @@
+{
+  "producer": {
+    "repository": "polaris/packages/billing-rules",
+    "commit": "2bd712c5a4e378b182f2f4fafabe2fa5ff6f2cb2",
+    "function": "billingRulePayloadDigest"
+  },
+  "payload": {
+    "schemaVersion": 2,
+    "rules": [
+      {
+        "id": "neutral-limit",
+        "class": "quantity-limit",
+        "effect": "reject",
+        "requiredFacts": ["service-occurrence"],
+        "parameters": {
+          "selector": {
+            "system": "https://example.invalid/system/service",
+            "codes": ["A"]
+          },
+          "maximum": 2,
+          "countingScope": {
+            "window": "treatment-case",
+            "subject": "patient-per-practice"
+          }
+        }
+      }
+    ]
+  },
+  "digest": "sha256:8b626d52685c03f9964ae1c620d839ec8988babc4ad3be9b5dbce22a3754d6a5"
+}

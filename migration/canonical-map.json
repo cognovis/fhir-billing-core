@@ -1,0 +1,82 @@
+{
+  "version": 2,
+  "mappings": [
+    {
+      "from": "https://fhir.cognovis.de/billing-core/StructureDefinition/billing-catalog-carrier",
+      "to": { "resourceType": "ChargeItemDefinition", "profile": "http://hl7.org/fhir/StructureDefinition/ChargeItemDefinition" }
+    },
+    {
+      "from": "https://fhir.cognovis.de/billing-core/StructureDefinition/billing-catalog-edition",
+      "to": { "resourceType": "Library", "artifactKind": "catalog-edition", "contentType": "application/json", "payloadSchemaVersion": 1 }
+    },
+    {
+      "from": "https://fhir.cognovis.de/billing-core/StructureDefinition/billing-rule-carrier",
+      "to": { "resourceType": "Library", "artifactKind": "configured-rule", "contentType": "application/json", "payloadSchemaVersion": 2, "semanticMajor": 4 }
+    },
+    {
+      "from": "https://fhir.cognovis.de/billing-core/StructureDefinition/billing-rule-set",
+      "to": { "resourceType": "Library", "artifactKind": "rule-set", "contentType": "application/json", "payloadSchemaVersion": 2, "semanticMajor": 4 }
+    },
+    {
+      "from": "https://fhir.cognovis.de/billing-core/StructureDefinition/billing-oracle",
+      "to": { "resourceType": "Parameters", "profile": "http://hl7.org/fhir/StructureDefinition/Parameters" }
+    },
+    {
+      "from": "https://fhir.cognovis.de/billing-core/StructureDefinition/billing-evaluation-result",
+      "to": { "resourceType": "Parameters", "profile": "http://hl7.org/fhir/StructureDefinition/Parameters" }
+    },
+    {
+      "from": "https://fhir.cognovis.de/billing-core/StructureDefinition/billing-evaluator-capability",
+      "to": { "resourceType": "CapabilityStatement", "profile": "http://hl7.org/fhir/StructureDefinition/CapabilityStatement" }
+    },
+    {
+      "from": "https://fhir.cognovis.de/billing-core/StructureDefinition/billing-rule-provenance",
+      "to": { "resourceType": "Provenance", "profile": "http://hl7.org/fhir/StructureDefinition/Provenance" }
+    },
+    {
+      "from": "https://fhir.cognovis.de/praxis/StructureDefinition/billing-rule-charge-item-definition",
+      "to": { "resourceType": "Library", "artifactKind": "configured-rule", "contentType": "application/json", "payloadSchemaVersion": 2, "semanticMajor": 4 }
+    },
+    {
+      "from": "https://fhir.cognovis.de/praxis/StructureDefinition/billing-rule-set-library",
+      "to": { "resourceType": "Library", "artifactKind": "rule-set", "contentType": "application/json", "payloadSchemaVersion": 2, "semanticMajor": 4 }
+    },
+    {
+      "from": "https://fhir.cognovis.de/praxis/schema/billing-rules/v2",
+      "to": "https://fhir.cognovis.de/billing-core/schema/billing-rules/v2"
+    },
+    {
+      "from": "https://fhir.cognovis.de/billing-core/StructureDefinition/billing-rule-payload",
+      "to": { "resourceType": "Library", "contentType": "application/json", "carrier": "Library.content", "payloadSchema": true }
+    },
+    {
+      "from": "https://fhir.cognovis.de/billing-core/StructureDefinition/billing-admission-state",
+      "to": { "admission": "SDK-derived", "legacyRead": "admissionExtensionParsing" }
+    },
+    {
+      "from": "https://fhir.cognovis.de/billing-core/StructureDefinition/billing-compatibility",
+      "to": { "payloadSchemaVersion": true, "semanticMajor": true }
+    },
+    {
+      "from": "https://fhir.cognovis.de/billing-core/StructureDefinition/billing-ordering",
+      "to": { "engineContract": "priority-then-id" }
+    },
+    {
+      "from": "https://fhir.cognovis.de/billing-core/StructureDefinition/billing-precision",
+      "to": { "engineContract": "exact-decimal" }
+    },
+    {
+      "from": "https://fhir.cognovis.de/billing-core/StructureDefinition/billing-catalog-scope",
+      "to": { "resourceType": "Library", "artifactKind": "catalog-edition", "manifestField": "catalogScope" }
+    },
+    {
+      "from": "https://fhir.cognovis.de/billing-core/StructureDefinition/billing-publication-period",
+      "to": { "resourceType": "Library", "artifactKind": "catalog-edition", "manifestField": "publicationPeriod" }
+    }
+  ],
+  "legacyReadCompatibility": {
+    "catalogEditionProfileDiscovery": true,
+    "admissionExtensionParsing": true,
+    "newWrites": "native-carriers-only"
+  }
+}

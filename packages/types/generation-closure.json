@@ -1,0 +1,12 @@
+{
+  "packages": [
+    "hl7.fhir.r4.core#4.0.1"
+  ],
+  "inputProfiles": [],
+  "baseDefinitions": [
+    "http://hl7.org/fhir/StructureDefinition/ChargeItemDefinition",
+    "http://hl7.org/fhir/StructureDefinition/Library",
+    "http://hl7.org/fhir/StructureDefinition/Parameters",
+    "http://hl7.org/fhir/StructureDefinition/Provenance"
+  ]
+}

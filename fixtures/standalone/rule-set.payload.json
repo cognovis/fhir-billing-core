@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 2,
+  "semanticMajor": 4,
+  "id": "synthetic-dental-rules-2026",
+  "rules": [
+    {
+      "id": "factor-threshold",
+      "class": "bounded-multiplier",
+      "mustUnderstand": true,
+      "effect": "reject",
+      "priority": 1,
+      "parameters": {
+        "selector": { "system": "https://example.invalid/CodeSystem/synthetic-dental-fee", "codes": ["*"] },
+        "minimum": 1,
+        "maximum": 3.5,
+        "standardThreshold": 2.3,
+        "aboveThresholdEffect": "reject",
+        "justificationWaivesThreshold": true
+      }
+    },
+    {
+      "id": "scaling-quantity-limit",
+      "class": "quantity-limit",
+      "mustUnderstand": true,
+      "effect": "reject",
+      "priority": 2,
+      "parameters": {
+        "selector": { "system": "https://example.invalid/CodeSystem/synthetic-dental-fee", "codes": ["SD-1000"] },
+        "maximum": 1
+      }
+    },
+    {
+      "id": "restoration-requires-companion",
+      "class": "companion-required",
+      "mustUnderstand": true,
+      "effect": "reject",
+      "priority": 3,
+      "parameters": {
+        "selector": { "system": "https://example.invalid/CodeSystem/synthetic-dental-fee", "codes": ["SD-2000"] },
+        "required": { "system": "https://example.invalid/CodeSystem/synthetic-dental-fee", "codes": ["SD-0500"] }
+      },
+      "provenance": {
+        "sources": [
+          { "kind": "author-assessment", "citation": "Synthetic rule desk assessment 2026-01, restoration companions" }
+        ],
+        "evidenceLevel": { "system": "https://example.invalid/CodeSystem/synthetic-evidence-level", "code": "assessed", "display": "Author assessment" }
+      }
+    },
+    {
+      "id": "exam-consultation-exclusive",
+      "class": "mutual-exclusion",
+      "mustUnderstand": true,
+      "effect": "reject",
+      "priority": 4,
+      "parameters": {
+        "selector": { "system": "https://example.invalid/CodeSystem/synthetic-dental-fee", "codes": ["SD-0020"] },
+        "excluded": { "system": "https://example.invalid/CodeSystem/synthetic-dental-fee", "codes": ["SD-0010"] }
+      },
+      "provenance": {
+        "sources": [
+          { "kind": "fee-schedule", "citation": "Synthetic dental fee schedule 2026, section 2" },
+          {
+            "kind": "court-decision",
+            "citation": "Synthetic Regional Court, file 1 S 23/26, decision of 2026-03-12",
+            "uri": "https://example.invalid/decisions/1-s-23-26",
+            "codes": ["SD-0010"]
+          }
+        ],
+        "evidenceLevel": { "system": "https://example.invalid/CodeSystem/synthetic-evidence-level", "code": "binding", "display": "Binding decision" },
+        "note": "Invented provenance; no real court, schedule or decision is cited."
+      }
+    }
+  ]
+}

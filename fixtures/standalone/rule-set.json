@@ -1,0 +1,47 @@
+{
+  "resourceType": "Library",
+  "id": "synthetic-dental-rules",
+  "url": "https://example.invalid/Library/synthetic-dental-rules",
+  "version": "2026.1",
+  "status": "active",
+  "effectivePeriod": {
+    "start": "2026-01-01",
+    "end": "2026-12-31"
+  },
+  "publisher": "Synthetic Dental Rule Authority",
+  "contact": [
+    {
+      "name": "Synthetic rule desk",
+      "telecom": [
+        {
+          "system": "email",
+          "value": "rules@example.invalid"
+        }
+      ]
+    }
+  ],
+  "type": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/library-type",
+        "code": "logic-library"
+      }
+    ]
+  },
+  "identifier": [
+    {
+      "system": "https://fhir.cognovis.de/billing-core/sid/artifact-kind",
+      "value": "rule-set"
+    },
+    {
+      "system": "https://fhir.cognovis.de/billing-core/sid/billing-rule-set-digest",
+      "value": "sha256:50945204fde3323189a06e28f58f81f43c92ac2d7e55d2634f16d57c7c1fbb82"
+    }
+  ],
+  "content": [
+    {
+      "contentType": "application/json",
+      "data": "eyJpZCI6InN5bnRoZXRpYy1kZW50YWwtcnVsZXMtMjAyNiIsInJ1bGVzIjpbeyJjbGFzcyI6ImJvdW5kZWQtbXVsdGlwbGllciIsImVmZmVjdCI6InJlamVjdCIsImlkIjoiZmFjdG9yLXRocmVzaG9sZCIsIm11c3RVbmRlcnN0YW5kIjp0cnVlLCJwYXJhbWV0ZXJzIjp7ImFib3ZlVGhyZXNob2xkRWZmZWN0IjoicmVqZWN0IiwianVzdGlmaWNhdGlvbldhaXZlc1RocmVzaG9sZCI6dHJ1ZSwibWF4aW11bSI6My41LCJtaW5pbXVtIjoxLCJzZWxlY3RvciI6eyJjb2RlcyI6WyIqIl0sInN5c3RlbSI6Imh0dHBzOi8vZXhhbXBsZS5pbnZhbGlkL0NvZGVTeXN0ZW0vc3ludGhldGljLWRlbnRhbC1mZWUifSwic3RhbmRhcmRUaHJlc2hvbGQiOjIuM30sInByaW9yaXR5IjoxfSx7ImNsYXNzIjoicXVhbnRpdHktbGltaXQiLCJlZmZlY3QiOiJyZWplY3QiLCJpZCI6InNjYWxpbmctcXVhbnRpdHktbGltaXQiLCJtdXN0VW5kZXJzdGFuZCI6dHJ1ZSwicGFyYW1ldGVycyI6eyJtYXhpbXVtIjoxLCJzZWxlY3RvciI6eyJjb2RlcyI6WyJTRC0xMDAwIl0sInN5c3RlbSI6Imh0dHBzOi8vZXhhbXBsZS5pbnZhbGlkL0NvZGVTeXN0ZW0vc3ludGhldGljLWRlbnRhbC1mZWUifX0sInByaW9yaXR5IjoyfSx7ImNsYXNzIjoiY29tcGFuaW9uLXJlcXVpcmVkIiwiZWZmZWN0IjoicmVqZWN0IiwiaWQiOiJyZXN0b3JhdGlvbi1yZXF1aXJlcy1jb21wYW5pb24iLCJtdXN0VW5kZXJzdGFuZCI6dHJ1ZSwicGFyYW1ldGVycyI6eyJyZXF1aXJlZCI6eyJjb2RlcyI6WyJTRC0wNTAwIl0sInN5c3RlbSI6Imh0dHBzOi8vZXhhbXBsZS5pbnZhbGlkL0NvZGVTeXN0ZW0vc3ludGhldGljLWRlbnRhbC1mZWUifSwic2VsZWN0b3IiOnsiY29kZXMiOlsiU0QtMjAwMCJdLCJzeXN0ZW0iOiJodHRwczovL2V4YW1wbGUuaW52YWxpZC9Db2RlU3lzdGVtL3N5bnRoZXRpYy1kZW50YWwtZmVlIn19LCJwcmlvcml0eSI6MywicHJvdmVuYW5jZSI6eyJldmlkZW5jZUxldmVsIjp7ImNvZGUiOiJhc3Nlc3NlZCIsImRpc3BsYXkiOiJBdXRob3IgYXNzZXNzbWVudCIsInN5c3RlbSI6Imh0dHBzOi8vZXhhbXBsZS5pbnZhbGlkL0NvZGVTeXN0ZW0vc3ludGhldGljLWV2aWRlbmNlLWxldmVsIn0sInNvdXJjZXMiOlt7ImNpdGF0aW9uIjoiU3ludGhldGljIHJ1bGUgZGVzayBhc3Nlc3NtZW50IDIwMjYtMDEsIHJlc3RvcmF0aW9uIGNvbXBhbmlvbnMiLCJraW5kIjoiYXV0aG9yLWFzc2Vzc21lbnQifV19fSx7ImNsYXNzIjoibXV0dWFsLWV4Y2x1c2lvbiIsImVmZmVjdCI6InJlamVjdCIsImlkIjoiZXhhbS1jb25zdWx0YXRpb24tZXhjbHVzaXZlIiwibXVzdFVuZGVyc3RhbmQiOnRydWUsInBhcmFtZXRlcnMiOnsiZXhjbHVkZWQiOnsiY29kZXMiOlsiU0QtMDAxMCJdLCJzeXN0ZW0iOiJodHRwczovL2V4YW1wbGUuaW52YWxpZC9Db2RlU3lzdGVtL3N5bnRoZXRpYy1kZW50YWwtZmVlIn0sInNlbGVjdG9yIjp7ImNvZGVzIjpbIlNELTAwMjAiXSwic3lzdGVtIjoiaHR0cHM6Ly9leGFtcGxlLmludmFsaWQvQ29kZVN5c3RlbS9zeW50aGV0aWMtZGVudGFsLWZlZSJ9fSwicHJpb3JpdHkiOjQsInByb3ZlbmFuY2UiOnsiZXZpZGVuY2VMZXZlbCI6eyJjb2RlIjoiYmluZGluZyIsImRpc3BsYXkiOiJCaW5kaW5nIGRlY2lzaW9uIiwic3lzdGVtIjoiaHR0cHM6Ly9leGFtcGxlLmludmFsaWQvQ29kZVN5c3RlbS9zeW50aGV0aWMtZXZpZGVuY2UtbGV2ZWwifSwibm90ZSI6IkludmVudGVkIHByb3ZlbmFuY2U7IG5vIHJlYWwgY291cnQsIHNjaGVkdWxlIG9yIGRlY2lzaW9uIGlzIGNpdGVkLiIsInNvdXJjZXMiOlt7ImNpdGF0aW9uIjoiU3ludGhldGljIGRlbnRhbCBmZWUgc2NoZWR1bGUgMjAyNiwgc2VjdGlvbiAyIiwia2luZCI6ImZlZS1zY2hlZHVsZSJ9LHsiY2l0YXRpb24iOiJTeW50aGV0aWMgUmVnaW9uYWwgQ291cnQsIGZpbGUgMSBTIDIzLzI2LCBkZWNpc2lvbiBvZiAyMDI2LTAzLTEyIiwiY29kZXMiOlsiU0QtMDAxMCJdLCJraW5kIjoiY291cnQtZGVjaXNpb24iLCJ1cmkiOiJodHRwczovL2V4YW1wbGUuaW52YWxpZC9kZWNpc2lvbnMvMS1zLTIzLTI2In1dfX1dLCJzY2hlbWFWZXJzaW9uIjoyLCJzZW1hbnRpY01ham9yIjo0fQ=="
+    }
+  ]
+}

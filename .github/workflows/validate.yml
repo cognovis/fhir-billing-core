@@ -1,0 +1,89 @@
+# Source-level validation for Billing Core. Build-free by design.
+#
+# This workflow runs no SUSHI and no IG Publisher. The TypeScript suite below
+# reads only committed files, so it runs secret-free: the lockfile resolves the
+# @cognovis packages to anonymously readable tarballs on npm.cognovis.de.
+# Everything that needs a publisher build, a packed release, or fsh-generated/
+# is owned by the central fhir-management run and the release path, not this
+# repository:
+#
+#   scripts/verify-publisher-qa.mjs
+#   scripts/check-offline-terminology.mjs
+#   scripts/verify-release.mjs
+#   scripts/verify-packed-portability.mjs
+#   the fsh-generated/ consumers inside `npm run verify` (the IG build itself
+#   runs only through `npm run fhir:publisher`, i.e. cognovis-fhir ig build)
+#
+# The fhir-management side runs them on its scheduled central trigger: its
+# ig-verify workflow executes `cognovis-fhir ig verify` for every guide
+# configured in `configs/publisher-checks.yaml`, once per night plus on demand,
+# so a red check here is a red step of that run.
+
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "validate-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}"
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate sources
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      # Node stays only for npm: the package-lock.json workspaces install with
+      # `npm ci`. It runs the latest LTS (toolchains standard, rule 2).
+      - name: Install Node runtime for npm
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: lts/*
+
+      # Bun runs the test suite (`bun test`) and the build helpers.
+      - name: Install Bun runtime
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+
+      - name: Verify version metadata
+        run: |
+          set -euo pipefail
+          VERSION_VALUE=$(tr -d '[:space:]' < VERSION)
+          SUSHI_VERSION=$(grep '^version:' sushi-config.yaml | awk '{print $2}')
+          test "$VERSION_VALUE" = "$SUSHI_VERSION"
+
+      - name: Run TypeScript test suite
+        run: |
+          set -euo pipefail
+          npm ci
+          npm test
+
+      # The engine packages ship inside partner products: Apache-2.0 and no
+      # dependency or peer dependency on any cognovis SDK (cognovis/fhir-billing-core#212).
+      - name: Verify engine manifests carry no cognovis SDK
+        run: npm run check:engine-manifests
+
+      - name: Lint workflows
+        env:
+          ACTIONLINT_VERSION: 1.7.7
+        run: |
+          set -euo pipefail
+          curl -fsSL \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+            -o "$RUNNER_TEMP/actionlint.tar.gz"
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" .github/workflows/*.yml
