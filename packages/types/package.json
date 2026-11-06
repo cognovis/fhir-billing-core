@@ -1,6 +1,6 @@
 {
   "name": "@cognovis/fhir-billing-types",
-  "version": "0.42.3",
+  "version": "0.42.4",
   "type": "module",
   "license": "Apache-2.0",
   "sideEffects": false,
@@ -29,6 +29,6 @@
   "publishConfig": {
     "registry": "https://npm.cognovis.de",
     "access": "public",
-    "tag": "fbc-16-billing-0-42-3"
+    "tag": "fbc-30-billing-0-42-4"
   }
 }
