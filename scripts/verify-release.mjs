@@ -11,6 +11,8 @@ import { assertIgDefinitions } from './ig-contract.mjs'
 import { fhirExamples } from './fhir-examples.mjs'
 
 const packageDirectories = ENGINE_PACKAGE_DIRECTORIES
+// The rule-set JSON Schema ships in the rules archive; the release workflow attaches that copy to the GitHub release.
+const RULE_SET_SCHEMA_ENTRY = 'schema/billing-rule-set.schema.json'
 const releaseVersion = readFileSync('VERSION', 'utf8').trim()
 const privateRegistry = 'https://npm.cognovis.de'
 const workspaceManifest = JSON.parse(readFileSync('package.json', 'utf8'))
@@ -72,6 +74,7 @@ for (const directory of packageDirectories) {
   if (!listing.includes('package/dist/index.js') || !listing.includes('package/dist/index.d.ts') || !listing.includes('package/NOTICE')) {
     throw new Error(`Tarball surface is incomplete for ${directory}`)
   }
+  if (directory === 'packages/rules' && !listing.includes(`package/${RULE_SET_SCHEMA_ENTRY}`)) throw new Error(`Tarball of ${directory} lacks ${RULE_SET_SCHEMA_ENTRY}.`)
   for (const entry of listing.trim().split('\n').filter(Boolean)) {
     if (entry.endsWith('/')) continue
     const content = execFileSync('tar', ['-xOzf', tarball, entry], {

@@ -11,7 +11,7 @@ export {
   type R4Resource,
 } from './generated.js'
 
-export const BILLING_CORE_VERSION = '0.41.1' as const
+export const BILLING_CORE_VERSION = '0.42.0' as const
 export const BILLING_RULE_SEMANTIC_MAJOR = 4 as const
 export const BILLING_RULE_PAYLOAD_SCHEMA_VERSION = 2 as const
 export const BILLING_ARTIFACT_KIND_SYSTEM = 'https://fhir.cognovis.de/billing-core/sid/artifact-kind' as const

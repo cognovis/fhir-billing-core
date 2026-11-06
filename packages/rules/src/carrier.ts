@@ -791,8 +791,22 @@ function freeze<T>(value: T): T {
   return value
 }
 
-/** Strict rule-set payload decoding shared by the rule-set Library codec and bare-payload consumers. */
+/**
+ * Strict decoding of a bare rule-set file, as `fhir-billing-check` and other bare-payload consumers read
+ * it. The file may name its JSON Schema in a top-level `$schema` string, which is dropped: it is no part of
+ * the payload and its digest never covered it. Otherwise it is the payload a rule-set Library carries.
+ */
 export function decodeBillingRuleSet(input: unknown): BillingRuleSet {
+  if (isRecord(input) && Object.hasOwn(input, '$schema')) {
+    const { $schema: schema, ...payload } = input
+    requireText(schema, 'Rule-set $schema')
+    return decodeRuleSetPayload(payload)
+  }
+  return decodeRuleSetPayload(input)
+}
+
+/** Strict rule-set payload decoding shared by the rule-set Library codec and bare-payload consumers. */
+function decodeRuleSetPayload(input: unknown): BillingRuleSet {
   if (!isRecord(input)) throw new BillingInputError('Rule-set payload must be an object.')
   // The fact-source declarations and the Contract binding are the optional members; every other key is
   // required, and no other is accepted.
@@ -881,7 +895,7 @@ export function decodeBillingLibrary(input: unknown): DecodedBillingLibrary {
   }
   if (libraryType(resource) !== 'logic-library') throw new BillingInputError('Rule-set Library type must be logic-library.')
   requireNoEntryDigests(links, 'Rule-set Library')
-  const payload = decodeBillingRuleSet(decodeContent(resource, BILLING_RULE_SET_MIME))
+  const payload = decodeRuleSetPayload(decodeContent(resource, BILLING_RULE_SET_MIME))
   const bindings = bindingLinks(links, payload)
   const digest = oneIdentifier(resource, BILLING_RULE_SET_DIGEST_SYSTEM, 'Rule-set digest')
   if (digest !== billingRuleSetDigest(payload)) throw new BillingInputError('Rule-set digest does not match the payload.', { cause: 'digest-mismatch' })

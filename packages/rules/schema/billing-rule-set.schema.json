@@ -1,0 +1,663 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fhir.cognovis.de/billing-core/schema/billing-rules/v2",
+  "title": "Billing Core rule set (payload schema 2, rule semantic major 4)",
+  "description": "A BillingRuleSet as an author writes it in a file: the payload that decodeBillingRuleSet in @cognovis/fhir-billing-rules accepts. The file may name this schema in $schema; the decoder drops that member, and the payload digest never covers it. The payload a rule-set Library carries in its base64 content is #/$defs/libraryPayload, the same members without $schema. A rule whose class Billing Core does not know is accepted with any parameters object; admission refuses it when mustUnderstand is true and the engine skips it otherwise. The decoder additionally enforces the constraints listed in $defs/decoderOnly, which JSON Schema cannot state. Patterns are ECMAScript regular expressions; no format keyword is used.",
+  "type": "object",
+  "$ref": "#/$defs/ruleSetMembers",
+  "properties": {
+    "$schema": {
+      "description": "The JSON Schema this file follows, for editors and validators. Not part of the payload: the decoder drops it, and a rule-set Library never carries it.",
+      "$ref": "#/$defs/nonBlankString"
+    }
+  },
+  "unevaluatedProperties": false,
+  "examples": [
+    {
+      "$schema": "https://fhir.cognovis.de/billing-core/schema/billing-rules/v2",
+      "schemaVersion": 2,
+      "semanticMajor": 4,
+      "id": "example-rule-set",
+      "rules": [
+        {
+          "id": "example-once-per-day",
+          "class": "quantity-limit",
+          "mustUnderstand": true,
+          "effect": "reject",
+          "priority": 10,
+          "parameters": { "selector": { "system": "https://example.invalid/fee-schedule", "codes": ["A100"] }, "maximum": 1, "countingScope": { "window": "day", "subject": "patient" } },
+          "provenance": {
+            "sources": [{ "kind": "fee-schedule", "citation": "Example fee schedule, code A100" }],
+            "evidenceLevel": { "system": "https://example.invalid/evidence-level", "code": "explicit" }
+          }
+        }
+      ]
+    }
+  ],
+  "$defs": {
+    "decoderOnly": {
+      "$comment": "Documentation, not a schema to validate against.",
+      "description": "Constraints the decoder enforces and JSON Schema cannot state: a file this schema accepts can still be refused by decodeBillingRuleSet for one of these.",
+      "properties": {
+        "unique-rule-ids": { "description": "Rule ids are unique within the rule set." },
+        "unique-fact-source-facts": { "description": "Each fact-source declaration names a different fact." },
+        "unique-coded-codes": { "description": "A procedure or diagnosis predicate names each code once across its string and object valueIn members." },
+        "unique-evidence-source-facts": { "description": "The sources of a minimum-evidence-count rule name different facts." },
+        "effective-period-order": { "description": "A rule's effectiveStart does not follow its effectiveEnd." },
+        "bounded-multiplier-order": { "description": "A bounded-multiplier minimum does not exceed its maximum, and its standardThreshold lies within the bounds." },
+        "patient-attribute-bounds-order": { "description": "A patient-attribute-constraint predicate minimum does not exceed its maximum." }
+      }
+    },
+    "libraryPayload": {
+      "title": "Billing Core rule-set Library payload",
+      "description": "The rule-set payload a rule-set Library carries as its one application/json attachment (base64), covered by the Library's rule-set digest. Unlike a rule-set file it holds no $schema member.",
+      "$ref": "#/$defs/ruleSetMembers",
+      "unevaluatedProperties": false
+    },
+    "ruleSetMembers": {
+      "type": "object",
+      "required": ["schemaVersion", "semanticMajor", "id", "rules"],
+      "properties": {
+        "schemaVersion": { "description": "Payload schema version; always 2.", "const": 2 },
+        "semanticMajor": { "description": "Rule semantic major; always 4.", "const": 4 },
+        "id": { "description": "The rule set's id.", "$ref": "#/$defs/nonBlankString" },
+        "rules": { "description": "The rules, evaluated by priority and then id.", "type": "array", "items": { "$ref": "#/$defs/rule" } },
+        "factSources": {
+          "description": "Where each jurisdiction-specific fact the rules name is read in the case's FHIR resources. Omit it when the rule set declares none.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/factSource" }
+        },
+        "appliesTo": { "$ref": "#/$defs/appliesTo" }
+      },
+      "if": {
+        "required": ["rules"],
+        "properties": { "rules": { "type": "array", "contains": { "type": "object", "required": ["class"], "properties": { "class": { "const": "contract-code-list" } } } } }
+      },
+      "then": {
+        "description": "A contract code list belongs only to a contract rule set.",
+        "required": ["appliesTo"],
+        "properties": { "appliesTo": { "type": "object", "required": ["contracts"] } }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "required": ["id", "class", "mustUnderstand", "effect", "priority", "parameters"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "description": "Unique within the rule set.", "$ref": "#/$defs/nonBlankString" },
+        "class": {
+          "description": "One of the generic rule classes, whose parameters this schema checks, or a class Billing Core does not know, whose parameters are any object.",
+          "$ref": "#/$defs/nonBlankString",
+          "examples": [
+            "quantity-limit", "value-limit", "mutual-exclusion", "companion-required", "bounded-multiplier", "accompanying-information-required",
+            "patient-attribute-constraint", "contract-participation", "contract-code-list", "setting-constraint", "prior-authorization-required",
+            "procedure-finding-requirement", "diagnosis-requirement", "provider-eligibility", "quota-degression", "minimum-evidence-count"
+          ]
+        },
+        "mustUnderstand": { "description": "Whether an evaluator that does not know the class must refuse the rule set (true) or may skip the rule (false).", "type": "boolean" },
+        "effect": { "description": "What a violation yields.", "enum": ["reject", "needs-review"] },
+        "priority": { "description": "Evaluation order, lowest first; a safe integer.", "$ref": "#/$defs/safeInteger" },
+        "requiredFacts": { "description": "Facts the rule needs, unique non-empty names. Checked for the generic classes only." },
+        "parameters": { "description": "The class's parameters; see $defs/ruleClassParameters.", "type": "object" },
+        "effectiveStart": { "description": "First day the rule applies (YYYY-MM-DD).", "$ref": "#/$defs/isoDate" },
+        "effectiveEnd": { "description": "Last day the rule applies (YYYY-MM-DD).", "$ref": "#/$defs/isoDate" },
+        "provenance": { "$ref": "#/$defs/provenance" }
+      },
+      "allOf": [
+        {
+          "if": { "required": ["class"], "properties": { "class": { "enum": [
+            "quantity-limit", "value-limit", "mutual-exclusion", "companion-required", "bounded-multiplier", "accompanying-information-required",
+            "patient-attribute-constraint", "contract-participation", "contract-code-list", "setting-constraint", "prior-authorization-required",
+            "procedure-finding-requirement", "diagnosis-requirement", "provider-eligibility", "quota-degression", "minimum-evidence-count"
+          ] } } },
+          "then": { "properties": { "requiredFacts": { "$ref": "#/$defs/uniqueStrings" } } }
+        },
+        { "if": { "required": ["class"], "properties": { "class": { "const": "quantity-limit" } } }, "then": { "properties": { "parameters": { "$ref": "#/$defs/ruleClassParameters/quantity-limit" } } } },
+        { "if": { "required": ["class"], "properties": { "class": { "const": "value-limit" } } }, "then": { "properties": { "parameters": { "$ref": "#/$defs/ruleClassParameters/value-limit" } } } },
+        { "if": { "required": ["class"], "properties": { "class": { "const": "mutual-exclusion" } } }, "then": { "properties": { "parameters": { "$ref": "#/$defs/ruleClassParameters/mutual-exclusion" } } } },
+        { "if": { "required": ["class"], "properties": { "class": { "const": "companion-required" } } }, "then": { "properties": { "parameters": { "$ref": "#/$defs/ruleClassParameters/companion-required" } } } },
+        { "if": { "required": ["class"], "properties": { "class": { "const": "bounded-multiplier" } } }, "then": { "properties": { "parameters": { "$ref": "#/$defs/ruleClassParameters/bounded-multiplier" } } } },
+        { "if": { "required": ["class"], "properties": { "class": { "const": "accompanying-information-required" } } }, "then": { "properties": { "parameters": { "$ref": "#/$defs/ruleClassParameters/accompanying-information-required" } } } },
+        { "if": { "required": ["class"], "properties": { "class": { "const": "patient-attribute-constraint" } } }, "then": { "properties": { "parameters": { "$ref": "#/$defs/ruleClassParameters/patient-attribute-constraint" } } } },
+        { "if": { "required": ["class"], "properties": { "class": { "const": "contract-participation" } } }, "then": { "properties": { "parameters": { "$ref": "#/$defs/ruleClassParameters/contract-participation" } } } },
+        {
+          "if": { "required": ["class"], "properties": { "class": { "const": "contract-code-list" } } },
+          "then": {
+            "description": "A contract code list's validity is its contract rule set's effective period, never its own.",
+            "properties": { "parameters": { "$ref": "#/$defs/ruleClassParameters/contract-code-list" } },
+            "not": { "anyOf": [{ "required": ["effectiveStart"] }, { "required": ["effectiveEnd"] }] }
+          }
+        },
+        { "if": { "required": ["class"], "properties": { "class": { "const": "setting-constraint" } } }, "then": { "properties": { "parameters": { "$ref": "#/$defs/ruleClassParameters/setting-constraint" } } } },
+        { "if": { "required": ["class"], "properties": { "class": { "const": "prior-authorization-required" } } }, "then": { "properties": { "parameters": { "$ref": "#/$defs/ruleClassParameters/prior-authorization-required" } } } },
+        { "if": { "required": ["class"], "properties": { "class": { "const": "procedure-finding-requirement" } } }, "then": { "properties": { "parameters": { "$ref": "#/$defs/ruleClassParameters/procedure-finding-requirement" } } } },
+        { "if": { "required": ["class"], "properties": { "class": { "const": "diagnosis-requirement" } } }, "then": { "properties": { "parameters": { "$ref": "#/$defs/ruleClassParameters/diagnosis-requirement" } } } },
+        { "if": { "required": ["class"], "properties": { "class": { "const": "provider-eligibility" } } }, "then": { "properties": { "parameters": { "$ref": "#/$defs/ruleClassParameters/provider-eligibility" } } } },
+        { "if": { "required": ["class"], "properties": { "class": { "const": "quota-degression" } } }, "then": { "properties": { "parameters": { "$ref": "#/$defs/ruleClassParameters/quota-degression" } } } },
+        { "if": { "required": ["class"], "properties": { "class": { "const": "minimum-evidence-count" } } }, "then": { "properties": { "parameters": { "$ref": "#/$defs/ruleClassParameters/minimum-evidence-count" } } } }
+      ]
+    },
+    "ruleClassParameters": {
+      "quantity-limit": {
+        "description": "Reject quantities above a configured maximum.",
+        "type": "object",
+        "required": ["selector", "maximum"],
+        "properties": {
+          "selector": { "$ref": "#/$defs/selector" },
+          "maximum": { "description": "Largest permitted quantity, a non-negative number.", "type": "number", "minimum": 0 },
+          "countingScope": { "$ref": "#/$defs/countingScope" },
+          "exceptWhen": { "$ref": "#/$defs/exceptWhen" },
+          "modifierExceptions": { "$ref": "#/$defs/modifierExceptions" }
+        },
+        "examples": [{ "selector": { "system": "https://example.invalid/fee-schedule", "codes": ["A100"] }, "maximum": 1, "countingScope": { "window": "day", "subject": "patient" } }]
+      },
+      "value-limit": {
+        "description": "Flag pre-multiplier unit-price times quantity above a configured maximum.",
+        "type": "object",
+        "required": ["selector", "maximum"],
+        "properties": {
+          "selector": { "$ref": "#/$defs/selector" },
+          "maximum": { "description": "Largest permitted amount, a non-negative decimal string with at most two fraction digits.", "type": "string", "pattern": "^\\d+(\\.\\d{1,2})?$" },
+          "countingScope": { "$ref": "#/$defs/countingScope" },
+          "exceptWhen": { "$ref": "#/$defs/exceptWhen" },
+          "modifierExceptions": { "$ref": "#/$defs/modifierExceptions" }
+        },
+        "examples": [{ "selector": { "codes": ["A100", "A101"] }, "maximum": "250.00" }]
+      },
+      "mutual-exclusion": {
+        "description": "Reject mutually exclusive codes.",
+        "type": "object",
+        "required": ["selector", "excluded"],
+        "properties": {
+          "selector": { "$ref": "#/$defs/selector" },
+          "excluded": { "description": "Codes that may not be billed with a selected code; literal codes, no \"*\".", "$ref": "#/$defs/codeSelector" },
+          "countingScope": { "$ref": "#/$defs/countingScope" },
+          "exceptWhen": { "$ref": "#/$defs/exceptWhen" },
+          "modifierExceptions": { "$ref": "#/$defs/modifierExceptions" }
+        },
+        "examples": [{ "selector": { "codes": ["A100"] }, "excluded": { "codes": ["A200", "A201"] }, "countingScope": { "window": "day", "subject": "patient" } }]
+      },
+      "companion-required": {
+        "description": "Require a configured companion code.",
+        "type": "object",
+        "required": ["selector", "required"],
+        "properties": {
+          "selector": { "$ref": "#/$defs/selector" },
+          "required": { "description": "Codes of which one must be billed with a selected code; literal codes, no \"*\".", "$ref": "#/$defs/codeSelector" },
+          "countingScope": { "$ref": "#/$defs/countingScope" },
+          "exceptWhen": { "$ref": "#/$defs/exceptWhen" },
+          "modifierExceptions": { "$ref": "#/$defs/modifierExceptions" }
+        },
+        "examples": [{ "selector": { "codes": ["A300"] }, "required": { "codes": ["A100"] } }]
+      },
+      "bounded-multiplier": {
+        "description": "Constrain a line multiplier to an inclusive lower bound and an optional inclusive upper bound.",
+        "type": "object",
+        "required": ["selector", "minimum"],
+        "properties": {
+          "selector": { "$ref": "#/$defs/selector" },
+          "minimum": { "description": "Inclusive lower bound of the multiplier.", "type": "number" },
+          "maximum": { "description": "Inclusive upper bound of the multiplier, not below minimum; absent for no upper bound.", "type": "number" },
+          "standardThreshold": { "description": "Multiplier above which aboveThresholdEffect applies; within the bounds.", "type": "number" },
+          "aboveThresholdEffect": { "description": "What a multiplier above standardThreshold yields; required with standardThreshold.", "enum": ["reject", "needs-review"] },
+          "justificationWaivesThreshold": { "description": "Whether a justification lifts the threshold; only with standardThreshold.", "type": "boolean" },
+          "agreementOverride": { "description": "A fact value that lifts the threshold, such as a recorded agreement; only with standardThreshold.", "$ref": "#/$defs/exception" },
+          "countingScope": { "$ref": "#/$defs/countingScope" },
+          "exceptWhen": { "$ref": "#/$defs/exceptWhen" },
+          "modifierExceptions": { "$ref": "#/$defs/modifierExceptions" }
+        },
+        "if": { "required": ["standardThreshold"] },
+        "then": { "required": ["aboveThresholdEffect"] },
+        "else": { "not": { "anyOf": [{ "required": ["aboveThresholdEffect"] }, { "required": ["agreementOverride"] }, { "required": ["justificationWaivesThreshold"] }] } },
+        "examples": [{ "selector": { "codes": ["*"] }, "minimum": 1, "maximum": 3.5, "standardThreshold": 2.3, "aboveThresholdEffect": "needs-review", "justificationWaivesThreshold": true }]
+      },
+      "accompanying-information-required": {
+        "description": "Require named accompanying information, optionally drawn from an admissible value alternation.",
+        "type": "object",
+        "required": ["selector", "information"],
+        "additionalProperties": false,
+        "properties": {
+          "selector": { "$ref": "#/$defs/selector" },
+          "information": {
+            "description": "The information a selected line must carry: its kind, the fact it is read from and optionally the admissible values.",
+            "type": "object",
+            "required": ["kind", "fact"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": { "description": "What the information is, such as a justification.", "$ref": "#/$defs/nonEmptyString" },
+              "fact": { "description": "The fact that carries the information.", "$ref": "#/$defs/nonEmptyString" },
+              "valueIn": { "description": "Admissible values, unique non-empty strings.", "$ref": "#/$defs/uniqueStrings" }
+            }
+          },
+          "countingScope": { "$ref": "#/$defs/countingScope" },
+          "exceptWhen": { "$ref": "#/$defs/exceptWhen" },
+          "modifierExceptions": { "$ref": "#/$defs/modifierExceptions" }
+        },
+        "examples": [{ "selector": { "codes": ["A100"] }, "information": { "kind": "site", "fact": "claim.site", "valueIn": ["left", "right"] } }]
+      },
+      "patient-attribute-constraint": {
+        "description": "Constrain a typed patient attribute by value alternation or by unit-bearing numeric bounds.",
+        "type": "object",
+        "required": ["selector", "attribute", "predicate"],
+        "additionalProperties": false,
+        "properties": {
+          "selector": { "$ref": "#/$defs/selector" },
+          "attribute": { "description": "The patient fact, such as patient.age or patient.gender.", "$ref": "#/$defs/nonEmptyString" },
+          "predicate": {
+            "description": "Either valueIn, or a minimum and/or maximum with their unit (a, mo, wk, d, h, min, s or 1); minimum does not exceed maximum.",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "valueIn": { "description": "Admissible values, JSON primitives.", "$ref": "#/$defs/primitiveList" },
+              "minimum": { "description": "Inclusive lower bound.", "type": "number" },
+              "maximum": { "description": "Inclusive upper bound.", "type": "number" },
+              "unit": { "description": "Unit of the bounds.", "$ref": "#/$defs/nonEmptyString" }
+            },
+            "anyOf": [
+              { "required": ["valueIn"], "not": { "anyOf": [{ "required": ["minimum"] }, { "required": ["maximum"] }, { "required": ["unit"] }] } },
+              { "required": ["unit"], "anyOf": [{ "required": ["minimum"] }, { "required": ["maximum"] }], "not": { "required": ["valueIn"] } }
+            ]
+          },
+          "countingScope": { "$ref": "#/$defs/countingScope" },
+          "exceptWhen": { "$ref": "#/$defs/exceptWhen" },
+          "modifierExceptions": { "$ref": "#/$defs/modifierExceptions" }
+        },
+        "examples": [{ "selector": { "codes": ["A100"] }, "attribute": "patient.age", "predicate": { "minimum": 18, "unit": "a" } }]
+      },
+      "contract-participation": {
+        "description": "Require participation in a configured contract.",
+        "type": "object",
+        "required": ["selector", "contract"],
+        "properties": {
+          "selector": { "$ref": "#/$defs/selector" },
+          "contract": { "description": "The contract the case must participate in.", "$ref": "#/$defs/nonEmptyString" },
+          "countingScope": { "$ref": "#/$defs/countingScope" },
+          "exceptWhen": { "$ref": "#/$defs/exceptWhen" },
+          "modifierExceptions": { "$ref": "#/$defs/modifierExceptions" }
+        },
+        "examples": [{ "selector": { "codes": ["A100"] }, "contract": "example-care-contract" }]
+      },
+      "contract-code-list": {
+        "description": "Reject a line whose code the selected contract does not permit.",
+        "type": "object",
+        "required": ["selector", "permitted"],
+        "additionalProperties": false,
+        "properties": {
+          "selector": { "$ref": "#/$defs/selector" },
+          "permitted": {
+            "description": "The codes the contract permits; literal codes, no \"*\". Only system and codes.",
+            "$ref": "#/$defs/codeSelector",
+            "type": "object",
+            "properties": { "system": true, "codes": true },
+            "additionalProperties": false
+          }
+        },
+        "examples": [{ "selector": { "codes": ["*"] }, "permitted": { "system": "https://example.invalid/fee-schedule", "codes": ["A100", "A101"] } }]
+      },
+      "setting-constraint": {
+        "description": "Permit or forbid a service in the billing settings carried by a named case fact.",
+        "type": "object",
+        "required": ["selector", "setting", "predicate"],
+        "additionalProperties": false,
+        "properties": {
+          "selector": { "$ref": "#/$defs/selector" },
+          "setting": { "description": "The case fact that carries the setting, such as encounter.class.", "$ref": "#/$defs/nonEmptyString" },
+          "predicate": {
+            "description": "Whether the listed settings are permitted (include) or forbidden (exclude).",
+            "type": "object",
+            "required": ["polarity", "valueIn"],
+            "additionalProperties": false,
+            "properties": {
+              "polarity": { "$ref": "#/$defs/polarity" },
+              "valueIn": { "description": "The settings, JSON primitives.", "$ref": "#/$defs/primitiveList" }
+            }
+          },
+          "countingScope": { "$ref": "#/$defs/countingScope" },
+          "exceptWhen": { "$ref": "#/$defs/exceptWhen" },
+          "modifierExceptions": { "$ref": "#/$defs/modifierExceptions" }
+        },
+        "examples": [{ "selector": { "codes": ["A100"] }, "setting": "encounter.class", "predicate": { "polarity": "include", "valueIn": ["AMB"] } }]
+      },
+      "prior-authorization-required": {
+        "description": "Require an on-file grant from a named authorization programme.",
+        "type": "object",
+        "required": ["selector", "authorization", "grant"],
+        "additionalProperties": false,
+        "properties": {
+          "selector": { "$ref": "#/$defs/selector" },
+          "authorization": { "description": "The authorization programme.", "$ref": "#/$defs/nonEmptyString" },
+          "grant": {
+            "description": "The fact and values that show the grant is on file. Only fact and valueIn.",
+            "$ref": "#/$defs/exception",
+            "type": "object",
+            "properties": { "fact": true, "valueIn": true },
+            "additionalProperties": false
+          },
+          "countingScope": { "$ref": "#/$defs/countingScope" },
+          "exceptWhen": { "$ref": "#/$defs/exceptWhen" },
+          "modifierExceptions": { "$ref": "#/$defs/modifierExceptions" }
+        },
+        "examples": [{ "selector": { "codes": ["A100"] }, "authorization": "example-programme", "grant": { "fact": "authorization.status", "valueIn": ["granted"] } }]
+      },
+      "procedure-finding-requirement": {
+        "description": "Require or forbid documented procedure findings drawn from a coded alternation.",
+        "type": "object",
+        "required": ["selector", "procedure"],
+        "additionalProperties": false,
+        "properties": {
+          "selector": { "$ref": "#/$defs/selector" },
+          "procedure": { "description": "The documented findings that must (include) or must not (exclude) be present.", "$ref": "#/$defs/codedPredicate" },
+          "countingScope": { "$ref": "#/$defs/countingScope" },
+          "exceptWhen": { "$ref": "#/$defs/exceptWhen" },
+          "modifierExceptions": { "$ref": "#/$defs/modifierExceptions" }
+        },
+        "examples": [{ "selector": { "codes": ["A100"] }, "procedure": { "fact": "procedure.findings", "system": "https://example.invalid/findings", "polarity": "include", "valueIn": ["F1", { "code": "F2", "qualifiers": { "site": ["left", "right"] } }] } }]
+      },
+      "diagnosis-requirement": {
+        "description": "Require or forbid documented diagnoses drawn from a coded alternation.",
+        "type": "object",
+        "required": ["selector", "diagnosis"],
+        "additionalProperties": false,
+        "properties": {
+          "selector": { "$ref": "#/$defs/selector" },
+          "diagnosis": { "description": "The documented diagnoses that must (include) or must not (exclude) be present.", "$ref": "#/$defs/codedPredicate" },
+          "countingScope": { "$ref": "#/$defs/countingScope" },
+          "exceptWhen": { "$ref": "#/$defs/exceptWhen" },
+          "modifierExceptions": { "$ref": "#/$defs/modifierExceptions" }
+        },
+        "examples": [{ "selector": { "codes": ["A100"] }, "diagnosis": { "fact": "diagnoses", "system": "https://example.invalid/diagnoses", "polarity": "include", "valueIn": ["D1", "D2"] } }]
+      },
+      "provider-eligibility": {
+        "description": "Require or forbid a provider qualification group or one of its declared members.",
+        "type": "object",
+        "required": ["selector", "provider"],
+        "additionalProperties": false,
+        "properties": {
+          "selector": { "$ref": "#/$defs/selector" },
+          "provider": {
+            "description": "The qualifications the provider must (include) or must not (exclude) hold.",
+            "type": "object",
+            "required": ["fact", "polarity", "qualifications"],
+            "additionalProperties": false,
+            "properties": {
+              "fact": { "description": "The fact that carries the qualifications, such as provider.qualifications.", "$ref": "#/$defs/nonEmptyString" },
+              "polarity": { "$ref": "#/$defs/polarity" },
+              "qualifications": {
+                "description": "Qualification groups, each optionally narrowed to some of its members.",
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": ["group"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "group": { "description": "The qualification group.", "$ref": "#/$defs/nonEmptyString" },
+                    "members": { "description": "Members of the group that qualify, unique non-empty strings; absent for the whole group.", "$ref": "#/$defs/uniqueStrings" }
+                  }
+                }
+              }
+            }
+          },
+          "countingScope": { "$ref": "#/$defs/countingScope" },
+          "exceptWhen": { "$ref": "#/$defs/exceptWhen" },
+          "modifierExceptions": { "$ref": "#/$defs/modifierExceptions" }
+        },
+        "examples": [{ "selector": { "codes": ["A100"] }, "provider": { "fact": "provider.qualifications", "polarity": "include", "qualifications": [{ "group": "surgery", "members": ["hand"] }] } }]
+      },
+      "quota-degression": {
+        "description": "Apply a stated volume adjustment above a stated quantity threshold, and flag either parameter when the source leaves it unstated.",
+        "type": "object",
+        "required": ["selector", "threshold", "adjustment"],
+        "additionalProperties": false,
+        "properties": {
+          "selector": { "$ref": "#/$defs/selector" },
+          "threshold": {
+            "description": "Whether the source states the threshold, and if so the quantity above which the adjustment applies (non-negative).",
+            "type": "object",
+            "required": ["stated"],
+            "additionalProperties": false,
+            "properties": {
+              "stated": { "description": "Whether the source states the threshold.", "type": "boolean" },
+              "quantity": { "description": "The quantity above which the adjustment applies; only when stated.", "type": "number", "minimum": 0 }
+            },
+            "if": { "required": ["stated"], "properties": { "stated": { "const": true } } },
+            "then": { "required": ["quantity"] },
+            "else": { "not": { "required": ["quantity"] } }
+          },
+          "adjustment": {
+            "description": "Whether the source states the adjustment, and if so the factor: a non-negative decimal string with at most four fraction digits.",
+            "type": "object",
+            "required": ["stated"],
+            "additionalProperties": false,
+            "properties": {
+              "stated": { "description": "Whether the source states the adjustment.", "type": "boolean" },
+              "factor": { "description": "The factor, a non-negative decimal string with at most four fraction digits; only when stated.", "type": "string", "pattern": "^\\d+(\\.\\d{1,4})?$" }
+            },
+            "if": { "required": ["stated"], "properties": { "stated": { "const": true } } },
+            "then": { "required": ["factor"] },
+            "else": { "not": { "required": ["factor"] } }
+          },
+          "scopeAxes": { "description": "Facts named as keys that must each hold one of the listed values for the rule to apply; an unavailable fact makes the outcome indeterminate.", "$ref": "#/$defs/alternationMap" },
+          "countingScope": { "$ref": "#/$defs/countingScope" },
+          "exceptWhen": { "$ref": "#/$defs/exceptWhen" },
+          "modifierExceptions": { "$ref": "#/$defs/modifierExceptions" }
+        },
+        "examples": [{ "selector": { "codes": ["A100"] }, "threshold": { "stated": true, "quantity": 10 }, "adjustment": { "stated": false }, "countingScope": { "window": "quarter", "subject": "patient" } }]
+      },
+      "minimum-evidence-count": {
+        "description": "Require a minimum total from named numeric evidence sources with individually bounded contributions.",
+        "type": "object",
+        "required": ["selector", "minimum", "sources"],
+        "additionalProperties": false,
+        "properties": {
+          "selector": { "$ref": "#/$defs/selector" },
+          "minimum": { "description": "The total the sources must reach, a positive safe integer.", "$ref": "#/$defs/positiveSafeInteger" },
+          "sources": {
+            "description": "Evidence sources, each naming a different fact, the credit per unit and optionally a cap on its contribution.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["fact", "credit"],
+              "additionalProperties": false,
+              "properties": {
+                "fact": { "description": "The numeric evidence fact.", "$ref": "#/$defs/nonEmptyString" },
+                "credit": { "description": "Credit per unit of the fact, a positive safe integer.", "$ref": "#/$defs/positiveSafeInteger" },
+                "maximumCredit": { "description": "Largest contribution of this source, a positive safe integer.", "$ref": "#/$defs/positiveSafeInteger" }
+              }
+            }
+          },
+          "countingScope": { "$ref": "#/$defs/countingScope" },
+          "exceptWhen": { "$ref": "#/$defs/exceptWhen" },
+          "modifierExceptions": { "$ref": "#/$defs/modifierExceptions" }
+        },
+        "examples": [{ "selector": { "codes": ["A100"] }, "minimum": 3, "sources": [{ "fact": "evidence.visits", "credit": 1, "maximumCredit": 2 }, { "fact": "evidence.reports", "credit": 2 }] }]
+      }
+    },
+    "selector": {
+      "description": "The codes the rule applies to: literal codes, or \"*\" as the only code for every code (within system when given).",
+      "type": "object",
+      "required": ["codes"],
+      "properties": {
+        "system": { "$ref": "#/$defs/nonEmptyString" },
+        "codes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/nonEmptyString" } }
+      },
+      "if": { "required": ["codes"], "properties": { "codes": { "type": "array", "contains": { "const": "*" } } } },
+      "then": { "properties": { "codes": { "type": "array", "maxItems": 1 } } }
+    },
+    "codeSelector": {
+      "description": "Literal codes, optionally within a system; \"*\" is not a wildcard here and is refused.",
+      "type": "object",
+      "required": ["codes"],
+      "properties": {
+        "system": { "$ref": "#/$defs/nonEmptyString" },
+        "codes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/nonEmptyString", "not": { "const": "*" } } }
+      }
+    },
+    "countingScope": {
+      "description": "Optional: the counting window and subject, such as quarter and patient.",
+      "type": "object",
+      "required": ["window", "subject"],
+      "properties": {
+        "window": { "description": "The counting window, such as day, quarter or year.", "$ref": "#/$defs/nonEmptyString" },
+        "subject": { "description": "What is counted per window, such as patient.", "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "exceptWhen": { "description": "Optional: the rule does not apply when the fact holds one of the values.", "$ref": "#/$defs/exception" },
+    "modifierExceptions": { "description": "Optional: modifiers that exempt a line from the rule.", "$ref": "#/$defs/uniqueStrings" },
+    "exception": {
+      "type": "object",
+      "required": ["fact", "valueIn"],
+      "properties": {
+        "fact": { "description": "The fact that is compared.", "$ref": "#/$defs/nonEmptyString" },
+        "valueIn": { "description": "The values that match, JSON primitives.", "$ref": "#/$defs/primitiveList" }
+      }
+    },
+    "codedPredicate": {
+      "type": "object",
+      "required": ["fact", "polarity", "valueIn"],
+      "additionalProperties": false,
+      "properties": {
+        "fact": { "description": "The fact that carries the documented codes.", "$ref": "#/$defs/nonEmptyString" },
+        "system": { "description": "The code system of the codes.", "$ref": "#/$defs/nonEmptyString" },
+        "polarity": { "$ref": "#/$defs/polarity" },
+        "valueIn": {
+          "description": "Admissible codes, each once: a code, or an object with the code and its own qualifier alternation.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "anyOf": [
+              { "$ref": "#/$defs/nonEmptyString" },
+              {
+                "type": "object",
+                "required": ["code"],
+                "additionalProperties": false,
+                "properties": { "code": { "$ref": "#/$defs/nonEmptyString" }, "qualifiers": { "$ref": "#/$defs/alternationMap" } }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "alternationMap": {
+      "description": "Named axes, each with at least one admissible JSON primitive.",
+      "type": "object",
+      "propertyNames": { "minLength": 1 },
+      "additionalProperties": { "$ref": "#/$defs/primitiveList" }
+    },
+    "polarity": { "description": "include or exclude.", "enum": ["include", "exclude"] },
+    "provenance": {
+      "description": "Where the rule comes from and how strong its basis is. Covered by the rule-set digest; never changes evaluation.",
+      "type": "object",
+      "required": ["sources", "evidenceLevel"],
+      "additionalProperties": false,
+      "properties": {
+        "sources": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/provenanceSource" } },
+        "evidenceLevel": {
+          "description": "A Coding whose system the rule-set author chooses.",
+          "type": "object",
+          "required": ["system", "code"],
+          "additionalProperties": false,
+          "properties": {
+            "system": { "$ref": "#/$defs/nonBlankString" },
+            "code": { "$ref": "#/$defs/nonBlankString" },
+            "display": { "$ref": "#/$defs/nonBlankString" },
+            "version": { "$ref": "#/$defs/nonBlankString" }
+          }
+        },
+        "note": { "$ref": "#/$defs/nonBlankString" }
+      }
+    },
+    "provenanceSource": {
+      "type": "object",
+      "required": ["kind", "citation"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["statute", "fee-schedule", "contract", "court-decision", "authority-statement", "commentary", "author-assessment"] },
+        "citation": { "description": "A court-decision names court, file number and decision date.", "$ref": "#/$defs/nonBlankString" },
+        "uri": { "$ref": "#/$defs/nonBlankString" },
+        "codes": { "description": "The fee codes the source concerns, when it concerns only some.", "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/nonBlankString" } }
+      }
+    },
+    "factSource": {
+      "description": "Where one declared fact is read: from a resource of the case, along a restricted path.",
+      "type": "object",
+      "required": ["fact", "from", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "fact": {
+          "description": "A dot-separated name, never a native fact and never a system|code Observation fact.",
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]*(\\.[A-Za-z][A-Za-z0-9_-]*)*$",
+          "not": { "enum": ["patient.age", "patient.gender", "encounter.class", "diagnoses", "provider.qualifications"] }
+        },
+        "from": { "description": "The resource the path starts from.", "enum": ["patient", "coverage", "account", "encounter", "performer", "performer-role"] },
+        "path": { "$ref": "#/$defs/factSourcePath" },
+        "valueAs": { "description": "How the found value becomes the fact's value.", "enum": ["code", "system|code", "boolean-present", "group-member"] },
+        "groupPath": { "description": "With valueAs group-member only: the path of the group coding, ending in coding('<system>').", "$ref": "#/$defs/codingPath" },
+        "perBilledCode": {
+          "description": "Read a boolean per billed code from codings of the path's last coding('<system>') step; never with valueAs.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "system": { "$ref": "#/$defs/nonEmptyString" } }
+        },
+        "absent": { "description": "A missing value means the fact is known to be absent.", "const": "known-absent" }
+      },
+      "allOf": [
+        {
+          "if": { "required": ["perBilledCode"] },
+          "then": { "not": { "required": ["valueAs"] }, "properties": { "path": { "$ref": "#/$defs/codingPath" } } }
+        },
+        {
+          "if": { "required": ["valueAs"], "properties": { "valueAs": { "const": "group-member" } } },
+          "then": {
+            "required": ["groupPath"],
+            "properties": { "from": { "const": "performer-role" }, "path": { "$ref": "#/$defs/codingPath" } },
+            "not": { "required": ["absent"] }
+          },
+          "else": { "not": { "required": ["groupPath"] } }
+        }
+      ]
+    },
+    "factSourcePath": {
+      "description": "At most 32 steps separated by \".\": an element name ([a-z][A-Za-z0-9]*, never coding, extension or an Object.prototype member name), extension('<url>'), or, as the last step after another, coding('<system>'). A quoted argument is non-empty and holds no '.",
+      "type": "string",
+      "pattern": "^(?:(?:(?!(?:coding|extension|constructor|prototype|toString|toLocaleString|valueOf|hasOwnProperty|isPrototypeOf|propertyIsEnumerable)(?:\\.|$))[a-z][A-Za-z0-9]*|extension\\('[^']+'\\))(?:\\.(?:(?!(?:coding|extension|constructor|prototype|toString|toLocaleString|valueOf|hasOwnProperty|isPrototypeOf|propertyIsEnumerable)(?:\\.|$))[a-z][A-Za-z0-9]*|extension\\('[^']+'\\))){0,31}|(?:(?!(?:coding|extension|constructor|prototype|toString|toLocaleString|valueOf|hasOwnProperty|isPrototypeOf|propertyIsEnumerable)(?:\\.|$))[a-z][A-Za-z0-9]*|extension\\('[^']+'\\))(?:\\.(?:(?!(?:coding|extension|constructor|prototype|toString|toLocaleString|valueOf|hasOwnProperty|isPrototypeOf|propertyIsEnumerable)(?:\\.|$))[a-z][A-Za-z0-9]*|extension\\('[^']+'\\))){0,30}\\.coding\\('[^']+'\\))$"
+    },
+    "codingPath": {
+      "description": "A fact-source path whose last step is coding('<system>').",
+      "$ref": "#/$defs/factSourcePath",
+      "type": "string",
+      "pattern": "\\.coding\\('[^']+'\\)$"
+    },
+    "appliesTo": {
+      "description": "Binds the rule set: to Contracts (a contract rule set) or to catalog editions (an overlay rule set), never both. Omit it on a rule set that is not bound.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "contracts": { "description": "Contract canonicals, optionally |version.", "$ref": "#/$defs/canonicalList" },
+        "catalogEditions": { "description": "Catalog edition canonicals, optionally |version.", "$ref": "#/$defs/canonicalList" }
+      },
+      "oneOf": [{ "required": ["contracts"] }, { "required": ["catalogEditions"] }]
+    },
+    "canonicalList": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "description": "An absolute URI without whitespace, optionally |version.", "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:[^\\s|]+(?:\\|[^\\s|]+)?$" }
+    },
+    "isoDate": {
+      "description": "A calendar date YYYY-MM-DD.",
+      "type": "string",
+      "pattern": "^(?:\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-8]))|(?:\\d{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)$"
+    },
+    "nonEmptyString": { "type": "string", "minLength": 1 },
+    "nonBlankString": { "description": "A string with at least one non-whitespace character.", "type": "string", "pattern": "\\S" },
+    "uniqueStrings": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/nonEmptyString" } },
+    "primitiveList": { "type": "array", "minItems": 1, "items": { "anyOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }] } },
+    "safeInteger": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+    "positiveSafeInteger": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }
+  }
+}

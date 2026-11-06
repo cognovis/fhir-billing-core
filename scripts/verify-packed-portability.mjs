@@ -72,7 +72,9 @@ export const surface = [billingCase, admission, ruleSet, BillingInputError, defi
 writeFileSync(join(scratch, 'tsconfig.json'), JSON.stringify({ compilerOptions: { strict: true, noEmit: true, module: 'NodeNext', moduleResolution: 'NodeNext', target: 'ES2022', skipLibCheck: false, types: [] }, files: ['consumer.ts'] }))
 execFileSync(process.execPath, [resolve(repository, 'node_modules/typescript/bin/tsc'), '-p', 'tsconfig.json'], { cwd: scratch, stdio: 'pipe' })
 
-writeFileSync(join(scratch, 'runner.mjs'), `import { BillingInputError, defineBillingRuleSet } from '@cognovis/fhir-billing-rules'
+writeFileSync(join(scratch, 'runner.mjs'), `import { readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
+import { BILLING_RULE_PAYLOAD_SCHEMA_URI, BillingInputError, decodeBillingRuleSet, defineBillingRuleSet } from '@cognovis/fhir-billing-rules'
 import { compileRuleSet, evaluateBillingCase } from '@cognovis/fhir-billing-engine'
 import { BILLING_REASON_CODES } from '@cognovis/fhir-billing-types'
 const SYSTEM = 'https://example.invalid/synthetic'
@@ -86,9 +88,12 @@ const decide = (quantity) => evaluateBillingCase(compiled, { id: 'case', asOf: '
 let refusal = 'none'
 try { evaluateBillingCase(compiled, { id: 'case', asOf: '2026-01-01', lines: [{ id: 'a', code: { system: SYSTEM, code: 'SYN-1' }, quantity: 1 }], facts: {} }) }
 catch (error) { refusal = error instanceof BillingInputError ? 'BillingInputError' : String(error) }
-console.log(JSON.stringify({ accepted: decide(1), rejected: decide(2), refusal, reasonCodes: BILLING_REASON_CODES.length > 0 }))
+// The rule-set JSON Schema is an export of the rules package, and a file naming it in $schema decodes.
+const schema = JSON.parse(readFileSync(createRequire(import.meta.url).resolve('@cognovis/fhir-billing-rules/schema/billing-rule-set.schema.json'), 'utf8'))
+const schemaFile = schema.$id === BILLING_RULE_PAYLOAD_SCHEMA_URI && decodeBillingRuleSet({ $schema: schema.$id, schemaVersion: 2, semanticMajor: 4, id: 'synthetic-rules', rules: [] }).id === 'synthetic-rules'
+console.log(JSON.stringify({ accepted: decide(1), rejected: decide(2), refusal, reasonCodes: BILLING_REASON_CODES.length > 0, schemaFile }))
 `)
-const expected = JSON.stringify({ accepted: 'accepted', rejected: 'rejected', refusal: 'BillingInputError', reasonCodes: true })
+const expected = JSON.stringify({ accepted: 'accepted', rejected: 'rejected', refusal: 'BillingInputError', reasonCodes: true, schemaFile: true })
 for (const [runtime, command] of [['node', process.execPath], ['bun', 'bun']]) {
   const output = execFileSync(command, ['runner.mjs'], { cwd: scratch, encoding: 'utf8' }).trim()
   if (output !== expected) throw new Error(`${runtime} packed consumer decided ${output}, expected ${expected}`)

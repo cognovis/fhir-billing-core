@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.42.0] - 2026-11-06
+
+### Added
+
+- **cognovis/fhir-billing-core#16**: a draft 2020-12 JSON Schema for `BillingRuleSet` files and the rule-set Library payload (`$defs/libraryPayload`), `$id` `https://fhir.cognovis.de/billing-core/schema/billing-rules/v2` (`BILLING_RULE_PAYLOAD_SCHEMA_URI`). Each of the 16 known rule classes has its own `parameters` schema selected by `class`; `factSources` and `appliesTo` are covered; a rule of an unknown class is accepted with any `parameters` object, as the decoder accepts it (the engine then refuses it when `mustUnderstand` is true). Constraints the schema cannot express (unique ids, period order and the like) are listed in `$defs/decoderOnly`.
+- The schema ships in `@cognovis/fhir-billing-rules` as the export `@cognovis/fhir-billing-rules/schema/billing-rule-set.schema.json` and as the release asset `billing-rule-set.schema.json`; the release workflow takes the asset from the packed rules archive and verifies its sha256 before attaching it.
+- `decodeBillingRuleSet` accepts a non-blank `$schema` string in a bare rule-set file and drops it; it is never part of the payload digest. A rule-set Library payload carrying `$schema` is still refused.
+- `tests/rule-set-schema.test.ts` judges a shared fixture set (one valid fixture per class and one per decoder rejection reason) with the schema and the decoder and requires identical verdicts. The README section "Rule classes" is generated from the schema by `scripts/rule-class-reference.mjs` and checked in `npm test`.
+- `fhir-billing-check` accepts a file with `$schema` once its SDK in `cognovis/chp` runs on `@cognovis/fhir-billing-rules` 0.42.0 or later. Published under the fresh `fbc-16-billing-0-42-0` npm tag.
+
 ## [0.41.1] - 2026-11-06
 
 ### Removed
