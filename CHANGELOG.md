@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.42.2] - 2026-11-06
+
+### Fixed
+
+- Prepare the neutral-header release with matching per-version publication
+  metadata. The unsuccessful 0.42.1 release tag is preserved unchanged.
+
 ## [0.42.1] - 2026-11-06
 
 ### Changed
