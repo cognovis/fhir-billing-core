@@ -36,16 +36,33 @@ it('continues to refuse custom resource profiles', () => {
 // The IG Publisher fails QA on a definition whose ^url is not <canonical>/StructureDefinition/<id>
 // unless sushi-config lists it under special-url. That QA runs only in the slow IG build, so this
 // fast check keeps the list complete.
-it('lists every non-standard FSH ^url under special-url in sushi-config', () => {
-  const fsh = readdirSync('input/fsh').filter((file) => file.endsWith('.fsh'))
-    .map((file) => readFileSync(`input/fsh/${file}`, 'utf8')).join('\n')
-  const config = readFileSync('sushi-config.yaml', 'utf8')
+function unlistedSpecialUrls(fsh, config) {
   const canonical = config.match(/^canonical:\s*(\S+)/m)[1]
-  const urls = [...fsh.matchAll(/^\* \^url = "([^"]+)"/gm)].map((match) => match[1])
+  // SUSHI accepts any run of spaces or tabs around `*`, `^url` and `=`.
+  const urls = [...fsh.matchAll(/^\*[ \t]+\^url[ \t]*=[ \t]*"([^"]+)"/gm)].map((match) => match[1])
   assert.ok(urls.length > 0, 'no FSH ^url found')
   const specialUrls = (config.match(/^ {2}special-url:\n((?: {4}- .*\n)+)/m)?.[1] ?? '')
     .split('\n').map((line) => line.replace(/^ {4}- /, '').trim()).filter(Boolean)
   const standard = (url) => ['StructureDefinition', 'CodeSystem', 'ValueSet'].some((type) => url.startsWith(`${canonical}/${type}/`))
-  const missing = urls.filter((url) => !standard(url) && !specialUrls.includes(url))
-  assert.deepEqual(missing, [])
+  return urls.filter((url) => !standard(url) && !specialUrls.includes(url))
+}
+
+it('lists every non-standard FSH ^url under special-url in sushi-config', () => {
+  const fsh = readdirSync('input/fsh').filter((file) => file.endsWith('.fsh'))
+    .map((file) => readFileSync(`input/fsh/${file}`, 'utf8')).join('\n')
+  assert.deepEqual(unlistedSpecialUrls(fsh, readFileSync('sushi-config.yaml', 'utf8')), [])
+})
+
+it('finds an unlisted ^url whatever its spacing', () => {
+  const config = 'canonical: https://example.invalid/ig\nparameters:\n  special-url:\n    - https://example.invalid/ig/extension/listed\n'
+  const fsh = [
+    '* ^url = "https://example.invalid/ig/extension/listed"',
+    '*  ^url  =  "https://example.invalid/ig/extension/wide"',
+    '*\t^url=\t"https://example.invalid/ig/extension/tight"',
+    '* ^url = "https://example.invalid/ig/CodeSystem/standard"',
+  ].join('\n')
+  assert.deepEqual(unlistedSpecialUrls(fsh, config), [
+    'https://example.invalid/ig/extension/wide',
+    'https://example.invalid/ig/extension/tight',
+  ])
 })
