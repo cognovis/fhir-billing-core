@@ -170,6 +170,7 @@ export const RULE_SET_FIXTURES: readonly RuleSetFixture[] = [
   reject('evidenceLevel without system', withRule({ provenance: { ...PROVENANCE, evidenceLevel: { code: 'c' } } })),
   reject('blank evidenceLevel code', withRule({ provenance: { ...PROVENANCE, evidenceLevel: { system: 's', code: ' ' } } })),
   reject('blank evidenceLevel display', withRule({ provenance: { ...PROVENANCE, evidenceLevel: { system: 's', code: 'c', display: '' } } })),
+  reject('blank evidenceLevel version', withRule({ provenance: { ...PROVENANCE, evidenceLevel: { system: 's', code: 'c', version: ' ' } } })),
   reject('blank provenance note', withRule({ provenance: { ...PROVENANCE, note: ' ' } })),
 
   // Shared semantics of the generic classes
@@ -249,6 +250,7 @@ export const RULE_SET_FIXTURES: readonly RuleSetFixture[] = [
   reject('patient attribute empty valueIn', withParameters('patient-attribute-constraint', { predicate: { valueIn: [] } })),
   reject('patient attribute object value', withParameters('patient-attribute-constraint', { predicate: { valueIn: [{ code: 'x' }] } })),
   reject('patient attribute minimum as a string', withParameters('patient-attribute-constraint', { predicate: { minimum: '18', unit: 'a' } })),
+  reject('patient attribute maximum as a string', withParameters('patient-attribute-constraint', { predicate: { maximum: '18', unit: 'a' } })),
   decoderOnly('patient attribute minimum above maximum', 'patient-attribute-bounds-order', withParameters('patient-attribute-constraint', { predicate: { minimum: 18, maximum: 6, unit: 'a' } })),
   reject('patient attribute bound without unit', withParameters('patient-attribute-constraint', { predicate: { minimum: 18 } })),
   reject('patient attribute bound with an empty unit', withParameters('patient-attribute-constraint', { predicate: { minimum: 18, unit: '' } })),
