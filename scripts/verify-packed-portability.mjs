@@ -95,8 +95,10 @@ const schema = JSON.parse(readFileSync(createRequire(import.meta.url).resolve('@
 const schemaFile = schema.$id === BILLING_RULE_PAYLOAD_SCHEMA_URI && decodeBillingRuleSet({ $schema: schema.$id, schemaVersion: 2, semanticMajor: 4, id: 'synthetic-rules', rules: [] }).id === 'synthetic-rules'
 console.log(JSON.stringify({ accepted: decide(1), rejected: decide(2), refusal, reasonCodes: BILLING_REASON_CODES.length > 0, schemaFile }))
 `)
+// Each runtime the packed consumer runs in, with the command that runs it.
+const RUNTIMES = [['node', process.execPath], ['bun', 'bun']]
 const expected = JSON.stringify({ accepted: 'accepted', rejected: 'rejected', refusal: 'BillingInputError', reasonCodes: true, schemaFile: true })
-for (const [runtime, command] of [['node', process.execPath], ['bun', 'bun']]) {
+for (const [runtime, command] of RUNTIMES) {
   const output = execFileSync(command, ['runner.mjs'], { cwd: scratch, encoding: 'utf8' }).trim()
   if (output !== expected) throw new Error(`${runtime} packed consumer decided ${output}, expected ${expected}`)
 }
@@ -109,7 +111,7 @@ for (const name of ENGINE_PACKAGES) {
   if (example === undefined) throw new Error(`${name} README ships no single js example`)
   const file = `readme-${name.split('/')[1]}.mjs`
   writeFileSync(join(scratch, file), example)
-  for (const [runtime, command] of [['node', process.execPath], ['bun', 'bun']]) {
+  for (const [runtime, command] of RUNTIMES) {
     try {
       execFileSync(command, [file], { cwd: scratch, encoding: 'utf8', stdio: 'pipe' })
     } catch (error) {

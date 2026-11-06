@@ -60,7 +60,7 @@ import { evaluateConformanceCases } from '@cognovis/fhir-billing-engine'
 
 const system = 'https://example.invalid/fee-schedule'
 
-// One rule: code A100 may be billed at most once per case.
+// One rule: a line of code A100 may carry a quantity of at most 1.
 const ruleSet = {
   schemaVersion: 2,
   semanticMajor: 4,

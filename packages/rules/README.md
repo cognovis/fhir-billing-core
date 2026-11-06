@@ -77,7 +77,7 @@ import {
   decodeBillingRuleSet,
 } from '@cognovis/fhir-billing-rules'
 
-// Decode a rule set with one rule: code A100 may be billed at most once.
+// Decode a rule set with one rule: a line of code A100 may carry a quantity of at most 1.
 const ruleSet = decodeBillingRuleSet({
   $schema: BILLING_RULE_PAYLOAD_SCHEMA_URI,
   schemaVersion: 2,
