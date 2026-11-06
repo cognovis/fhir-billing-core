@@ -7,7 +7,9 @@
 # allow-list and access ring and runs no lifecycle scripts. That is why the
 # engine manifest guard (Apache-2.0, no cognovis SDK dependency) runs here as an
 # explicit step before packing.
-# The same tarballs are then attached to the GitHub release for the tag.
+# The same tarballs are then attached to the GitHub release for the tag, with
+# the rule-set JSON Schema billing-rule-set.schema.json taken from the packed
+# rules archive (cognovis/fhir-billing-core#16).
 #
 # Two jobs keep the publish credentials away from code the build executes.
 # `build` runs the tests, packs once and runs the packed consumers, which
@@ -56,6 +58,7 @@ jobs:
       types_sha256: ${{ steps.pack.outputs.types_sha256 }}
       rules_sha256: ${{ steps.pack.outputs.rules_sha256 }}
       engine_sha256: ${{ steps.pack.outputs.engine_sha256 }}
+      schema_sha256: ${{ steps.pack.outputs.schema_sha256 }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -116,7 +119,12 @@ jobs:
             test -f "$RUNNER_TEMP/packs/$tarball"
             sha256=$(sha256sum "$RUNNER_TEMP/packs/$tarball" | cut -d' ' -f1)
             printf '%s_tarball=%s\n%s_sha256=%s\n' "$package_name" "$tarball" "$package_name" "$sha256" >> "$GITHUB_OUTPUT"
+            if [ "$package_name" = rules ]; then rules_tarball=$tarball; fi
           done
+          # The release asset is the schema the rules archive ships, extracted from that archive.
+          tar -xOzf "$RUNNER_TEMP/packs/$rules_tarball" package/schema/billing-rule-set.schema.json > "$RUNNER_TEMP/packs/billing-rule-set.schema.json"
+          jq -e '."$id" == "https://fhir.cognovis.de/billing-core/schema/billing-rules/v2"' "$RUNNER_TEMP/packs/billing-rule-set.schema.json" > /dev/null
+          printf 'schema_sha256=%s\n' "$(sha256sum "$RUNNER_TEMP/packs/billing-rule-set.schema.json" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
       - name: Verify the exact packed compatibility matrix
         env:
@@ -132,7 +140,9 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: packed-archives
-          path: ${{ runner.temp }}/packs/*.tgz
+          path: |
+            ${{ runner.temp }}/packs/*.tgz
+            ${{ runner.temp }}/packs/billing-rule-set.schema.json
           if-no-files-found: error
           retention-days: 7
 
@@ -195,16 +205,22 @@ jobs:
           TYPES_SHA256: ${{ needs.build.outputs.types_sha256 }}
           RULES_SHA256: ${{ needs.build.outputs.rules_sha256 }}
           ENGINE_SHA256: ${{ needs.build.outputs.engine_sha256 }}
+          SCHEMA_SHA256: ${{ needs.build.outputs.schema_sha256 }}
         run: |
           set -euo pipefail
           packs="$RUNNER_TEMP/packs"
           TYPES_TARBALL="$packs/$TYPES_FILE" RULES_TARBALL="$packs/$RULES_FILE" ENGINE_TARBALL="$packs/$ENGINE_FILE"
+          SCHEMA_FILE="$packs/billing-rule-set.schema.json"
+          test -n "$SCHEMA_SHA256"
           printf '%s  %s\n' \
             "$TYPES_SHA256" "$TYPES_TARBALL" \
             "$RULES_SHA256" "$RULES_TARBALL" \
-            "$ENGINE_SHA256" "$ENGINE_TARBALL" | sha256sum --check --strict
-          test "$(find "$packs" -type f | wc -l)" = 3
-          printf 'TYPES_TARBALL=%s\nRULES_TARBALL=%s\nENGINE_TARBALL=%s\n' "$TYPES_TARBALL" "$RULES_TARBALL" "$ENGINE_TARBALL" >> "$GITHUB_ENV"
+            "$ENGINE_SHA256" "$ENGINE_TARBALL" \
+            "$SCHEMA_SHA256" "$SCHEMA_FILE" | sha256sum --check --strict
+          # The schema asset is byte-identical to the one inside the verified rules archive.
+          tar -xOzf "$RULES_TARBALL" package/schema/billing-rule-set.schema.json | cmp - "$SCHEMA_FILE"
+          test "$(find "$packs" -type f | wc -l)" = 4
+          printf 'TYPES_TARBALL=%s\nRULES_TARBALL=%s\nENGINE_TARBALL=%s\nSCHEMA_FILE=%s\n' "$TYPES_TARBALL" "$RULES_TARBALL" "$ENGINE_TARBALL" "$SCHEMA_FILE" >> "$GITHUB_ENV"
 
       - name: Verify explicit immutable publication tag
         run: |
@@ -271,5 +287,5 @@ jobs:
             --target "$release_sha" \
             --title "$RELEASE_TAG" \
             --notes "Release $RELEASE_TAG" \
-            "$TYPES_TARBALL" "$RULES_TARBALL" "$ENGINE_TARBALL"
+            "$TYPES_TARBALL" "$RULES_TARBALL" "$ENGINE_TARBALL" "$SCHEMA_FILE"
           test "$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .id)" = "$previous_latest"

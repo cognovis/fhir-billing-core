@@ -6,7 +6,7 @@ description: >-
   Jurisdiction-neutral FHIR R4 contracts for deterministic medical billing
   rules and their reference evaluator.
 status: draft
-version: 0.41.1
+version: 0.42.0
 date: 2026-10-26
 fhirVersion: 4.0.1
 copyrightYear: 2026+

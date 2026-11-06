@@ -1,6 +1,6 @@
 {
   "name": "@cognovis/fhir-billing-rules",
-  "version": "0.41.1",
+  "version": "0.42.0",
   "type": "module",
   "license": "Apache-2.0",
   "sideEffects": false,
@@ -14,24 +14,26 @@
   },
   "files": [
     "dist",
+    "schema",
     "NOTICE"
   ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./schema/billing-rule-set.schema.json": "./schema/billing-rule-set.schema.json"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@cognovis/fhir-billing-types": "0.41.1"
+    "@cognovis/fhir-billing-types": "0.42.0"
   },
   "publishConfig": {
     "registry": "https://npm.cognovis.de",
     "access": "public",
-    "tag": "fbc-212-billing-0-41-1"
+    "tag": "fbc-16-billing-0-42-0"
   }
 }
