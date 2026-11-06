@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.42.1] - 2026-11-06
+
+### Changed
+
+- Render the guide header with a plain-text cognovis home link instead of the
+  gematik logo. Retain the pinned rendering template, its Apache-2.0 licence
+  and gematik copyright attribution.
+
 ## [0.42.0] - 2026-11-06
 
 ### Added
