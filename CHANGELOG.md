@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Ship a README in the `@cognovis/fhir-billing-types`, `-rules` and `-engine`
+  tarballs with the anonymous install, entry points, a runnable example and the
+  license. The packed portability check runs each example in Node and Bun.
+
 ## [0.42.3] - 2026-11-06
 
 ### Fixed
