@@ -1,6 +1,6 @@
 {
   "name": "@cognovis/fhir-billing-rules",
-  "version": "0.41.1",
+  "version": "0.40.1",
   "type": "module",
   "license": "Apache-2.0",
   "sideEffects": false,
@@ -27,11 +27,11 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@cognovis/fhir-billing-types": "0.41.1"
+    "@cognovis/fhir-billing-types": "0.40.1"
   },
   "publishConfig": {
     "registry": "https://npm.cognovis.de",
     "access": "public",
-    "tag": "fbc-212-billing-0-41-1"
+    "tag": "fbc-20-billing-0-40-1"
   }
 }

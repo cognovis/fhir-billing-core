@@ -1,6 +1,6 @@
 {
   "from": "0.4.x",
-  "to": "0.41.1",
+  "to": "0.40.1",
   "payloadSchema": 2,
   "semanticMajor": {
     "from": 3,

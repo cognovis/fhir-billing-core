@@ -10,18 +10,6 @@ Context: Library.relatedArtifact
 * value[x] only string
 * valueString ^short = "sha256:<64 lowercase hexadecimal digits> from billingCatalogDefinitionDigest"
 
-Extension: CatalogDefinitionCoding
-Id: catalog-definition-coding
-Title: "Catalog definition coding"
-Description: "Billed coding (system|code) of a catalog definition on its composed-of entry in a contract-bound catalog-edition Library. The member-set digest of a contract-bound edition binds this value to the edition's admission. Absent on an unbound edition."
-Context: Library.relatedArtifact
-* ^url = "https://fhir.cognovis.de/billing-core/extension/catalog-definition-coding"
-* . 0..1
-* extension 0..0
-* value[x] 1..1
-* value[x] only string
-* valueString ^short = "system|code of the definition's single coding"
-
 Extension: ConfiguredRuleMembersDigest
 Id: configured-rule-members-digest
 Title: "Configured rule members digest"
