@@ -1,7 +1,7 @@
 {
   "package-id": "de.cognovis.fhir.billing.core",
-  "version": "0.34.4",
-  "path": "https://fhir.cognovis.de/billing-core/0.34.4",
+  "version": "0.42.2",
+  "path": "https://fhir.cognovis.de/billing-core/0.42.2",
   "status": "release",
   "first": false,
   "mode": "working",
