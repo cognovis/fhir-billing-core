@@ -1049,8 +1049,11 @@ SDK and carry Apache-2.0; `scripts/engine-manifest-guard.mjs`
 `.github/workflows/validate.yml` and before packing in the release workflow.
 The packed portability check installs the three archives offline into an empty
 consumer, refuses any further cognovis package in its tree, typechecks the
-public types and proves evaluator decisions and a refusal in Node and Bun. The
-release workflow proves the exact archive set it publishes.
+public types, proves evaluator decisions and a refusal in Node and Bun, and runs
+the example of each package README in both runtimes. Each package ships a
+README.md whose content `scripts/package-readme.mjs` checks in `npm test`: the
+anonymous install, the license and one runnable example, with no private
+reference. The release workflow proves the exact archive set it publishes.
 
 Run `npm install`, then `npm run verify`. The verification builds the TypeScript
 packages, exercises the neutral and synthetic German/Swiss fixtures through the

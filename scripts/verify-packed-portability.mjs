@@ -5,7 +5,8 @@
 // The consumer installs the three archives and nothing else. It proves what a partner relies on when it
 // ships the engine inside its own product: the archives install without any cognovis SDK, every
 // cognovis package in the tree is one of the three, the public types typecheck from the package roots,
-// and the engine decides and refuses a synthetic case identically in both runtimes.
+// the engine decides and refuses a synthetic case identically in both runtimes, and the example of each
+// package README runs in both runtimes against the archive that ships it.
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
@@ -13,6 +14,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ENGINE_PACKAGE_DIRECTORIES, ENGINE_PACKAGES } from './engine-manifest-guard.mjs'
+import { readmeExample } from './package-readme.mjs'
 
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -97,5 +99,22 @@ const expected = JSON.stringify({ accepted: 'accepted', rejected: 'rejected', re
 for (const [runtime, command] of [['node', process.execPath], ['bun', 'bun']]) {
   const output = execFileSync(command, ['runner.mjs'], { cwd: scratch, encoding: 'utf8' }).trim()
   if (output !== expected) throw new Error(`${runtime} packed consumer decided ${output}, expected ${expected}`)
+}
+
+// The example of every README (cognovis/fhir-billing-core#30) runs against the installed archives: the
+// README the consumer reads is the one the archive ships, and its example must run as written.
+for (const name of ENGINE_PACKAGES) {
+  const readme = readFileSync(join(scratch, 'node_modules', name, 'README.md'), 'utf8')
+  const example = readmeExample(readme)
+  if (example === undefined) throw new Error(`${name} README ships no single js example`)
+  const file = `readme-${name.split('/')[1]}.mjs`
+  writeFileSync(join(scratch, file), example)
+  for (const [runtime, command] of [['node', process.execPath], ['bun', 'bun']]) {
+    try {
+      execFileSync(command, [file], { cwd: scratch, encoding: 'utf8', stdio: 'pipe' })
+    } catch (error) {
+      throw new Error(`${name} README example fails in ${runtime}: ${error.stderr || error.message}`)
+    }
+  }
 }
 console.log(`packed portability passed: ${tarballs.length} archives, no cognovis SDK installed, decisions identical in node and bun`)
