@@ -26,6 +26,7 @@ parameters:
   no-expansions-files: true
   special-url:
     - https://fhir.cognovis.de/billing-core/extension/catalog-definition-digest
+    - https://fhir.cognovis.de/billing-core/extension/catalog-definition-coding
     - https://fhir.cognovis.de/billing-core/extension/configured-rule-members-digest
     - https://fhir.cognovis.de/billing-core/extension/billing-admission-tenant
     - https://fhir.cognovis.de/billing-core/extension/billing-admitted-artifact

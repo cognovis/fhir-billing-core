@@ -34,4 +34,5 @@ depend on a cognovis SDK.
 
 [CONTRIBUTING.md](CONTRIBUTING.md) holds the DCO sign-off rule and the
 maintainer statement. Commits that will be public carry a `Signed-off-by`
-trailer.
+trailer. Land pull requests with `ccore pr merge --strategy merge`: the
+default squash writes a new commit without the trailer.

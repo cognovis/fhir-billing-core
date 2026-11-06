@@ -32,3 +32,20 @@ it('continues to refuse custom resource profiles', () => {
     { resourceType: 'StructureDefinition', type: 'Library', derivation: 'constraint', url: 'https://example.invalid/profile' },
   ]), /custom resource profiles/)
 })
+
+// The IG Publisher fails QA on a definition whose ^url is not <canonical>/StructureDefinition/<id>
+// unless sushi-config lists it under special-url. That QA runs only in the slow IG build, so this
+// fast check keeps the list complete.
+it('lists every non-standard FSH ^url under special-url in sushi-config', () => {
+  const fsh = readdirSync('input/fsh').filter((file) => file.endsWith('.fsh'))
+    .map((file) => readFileSync(`input/fsh/${file}`, 'utf8')).join('\n')
+  const config = readFileSync('sushi-config.yaml', 'utf8')
+  const canonical = config.match(/^canonical:\s*(\S+)/m)[1]
+  const urls = [...fsh.matchAll(/^\* \^url = "([^"]+)"/gm)].map((match) => match[1])
+  assert.ok(urls.length > 0, 'no FSH ^url found')
+  const specialUrls = (config.match(/^ {2}special-url:\n((?: {4}- .*\n)+)/m)?.[1] ?? '')
+    .split('\n').map((line) => line.replace(/^ {4}- /, '').trim()).filter(Boolean)
+  const standard = (url) => ['StructureDefinition', 'CodeSystem', 'ValueSet'].some((type) => url.startsWith(`${canonical}/${type}/`))
+  const missing = urls.filter((url) => !standard(url) && !specialUrls.includes(url))
+  assert.deepEqual(missing, [])
+})
