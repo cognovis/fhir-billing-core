@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto'
 import {
   BILLING_ARTIFACT_KIND_SYSTEM,
-  BILLING_CATALOG_DEFINITION_CODING_EXTENSION,
   BILLING_CATALOG_DEFINITION_DIGEST_EXTENSION,
   BILLING_CATALOG_EDITION_MIME,
   BILLING_CONFIGURED_RULE_MEMBERS_DIGEST_EXTENSION,
@@ -43,12 +42,6 @@ export interface BillingCatalogEditionMemberLink {
   readonly resource: string
   readonly configuredRuleMembersDigest?: string
   readonly catalogDefinitionDigest?: string
-  /**
-   * On a contract-bound edition, the billed coding (`system|code`) of a catalog definition member, carried
-   * as the `BILLING_CATALOG_DEFINITION_CODING_EXTENSION` extension and covered by the member-set digest;
-   * absent on every other entry and on an unbound edition. `buildBillingLibrary` writes it.
-   */
-  readonly catalogDefinitionCoding?: string
 }
 /** A catalog definition a declaring edition's configured rules may name: its `canonical|version` and its billed `system|code`. */
 export interface BillingCatalogDefinitionCode {
@@ -85,11 +78,6 @@ export interface BillingCatalogEditionLibraryInput extends BillingLibraryInputBa
   readonly kind: 'catalog-edition'
   readonly publisher: string
   readonly payload: BillingCatalogEditionManifestV1
-  /**
-   * The edition's `composed-of` members. A contract-bound edition's Contracts are its manifest `contracts`:
-   * the builder writes one `depends-on` link per Contract after the members, sorted, and the decoder
-   * refuses an edition whose `depends-on` links differ from them (cognovis/fhir-billing-core#127).
-   */
   readonly relatedArtifacts: readonly BillingCatalogEditionMemberLink[]
   /**
    * Build input only (not decoded), required: every ChargeItemDefinition member of the edition as the
@@ -108,7 +96,7 @@ export interface BillingCatalogEditionLibraryInput extends BillingLibraryInputBa
    */
   readonly ruleCompleteness?: BillingRuleCompleteness
   /**
-   * Build input of a declaring or a contract-bound edition only (not decoded): every configured-rule Library member of the
+   * Build input of a declaring edition only (not decoded): every configured-rule Library member of the
    * edition. The builder refuses the declaration when one is no member, two carry one rule id, a rule of
    * a class Core knows names no explicit codes (`billingRuleNamedCodes` is `undefined`: a `"*"` or
    * code-less selector), or its `depends-on` links are not exactly the given `definitions` of the codes it
@@ -125,7 +113,7 @@ export interface BillingCatalogEditionLibraryInput extends BillingLibraryInputBa
    */
   readonly definitions?: readonly BillingCatalogDefinitionCode[]
   /**
-   * Build input of a declaring or a contract-bound edition only (not decoded): the edition's one rule-set Library member, when
+   * Build input of a declaring edition only (not decoded): the edition's one rule-set Library member, when
    * it has one, as `configuredRules` passes its Libraries. The builder decodes it, refuses anything but a
    * rule-set Library, and exempts its `url|version`, which must be a member and neither a given definition
    * nor a given configured rule. A canonical alone is not accepted, so an omitted catalog definition cannot
@@ -364,30 +352,19 @@ export function billingCatalogDefinitionDigest(definition: Record<string, unknow
  * over the canonical JSON of `{ scheme: 2, members }`, where `members` lists `[url|version, catalog
  * definition digest or null, configured-rule members digest or null]` per `composed-of` entry, sorted by
  * `url|version`. An admission record binding it binds every definition's prices and every definition's
- * configured rules. A contract-bound edition's digest also covers its manifest's `contracts`, sorted, as
- * `{ scheme: 2, members, contracts }` (cognovis/fhir-billing-core#127), each member with its catalog
- * definition coding or null as a fourth element, so the admission record binds the Contract assignment
- * and which codings the edition holds; an unbound edition's digest is unchanged. A legacy edition keeps the scheme-1
- * {@link billingCatalogMemberSetDigest}.
+ * configured rules. A legacy edition keeps the scheme-1 {@link billingCatalogMemberSetDigest}.
  */
-export function billingCatalogEditionDigest(members: readonly BillingCatalogEditionMemberLink[], contracts?: readonly string[]): string {
+export function billingCatalogEditionDigest(members: readonly BillingCatalogEditionMemberLink[]): string {
   if (members.length === 0) throw new BillingInputError('Catalog membership must not be empty.')
   const entries = members.map((member, index) => [
     canonicalVersion(member.resource.trim(), `Catalog member ${index}`),
     member.catalogDefinitionDigest ?? null,
     member.configuredRuleMembersDigest ?? null,
-    // Only a contract-bound edition's entries carry their coding; an unbound edition keeps its digest.
-    ...(contracts === undefined ? [] : [member.catalogDefinitionCoding ?? null]),
   ] as const).sort((left, right) => left[0] < right[0] ? -1 : left[0] > right[0] ? 1 : 0)
   if (entries.some((entry, index) => index > 0 && entries[index - 1]![0] === entry[0])) {
     throw new BillingInputError('Catalog membership must not contain duplicates.', { cause: 'duplicate' })
   }
-  if (contracts === undefined) return sha256({ scheme: 2, members: entries })
-  const bound = [...contracts].sort()
-  if (bound.length === 0 || bound.some((contract, index) => index > 0 && bound[index - 1] === contract)) {
-    throw new BillingInputError('Catalog edition contracts must be a non-empty list of unique Contract canonicals.')
-  }
-  return sha256({ scheme: 2, members: entries, contracts: bound })
+  return sha256({ scheme: 2, members: entries })
 }
 
 function validateCatalogSource(value: unknown, index: number): BillingCatalogSource {
@@ -416,40 +393,9 @@ export function billingCatalogSourceSetDigest(sources: readonly BillingCatalogSo
   return sha256([...validated].sort(compareCanonical))
 }
 
-/** A Contract canonical a contract-bound edition names, as a contract rule set's: an absolute URI without whitespace, optionally `|version`. */
-const CONTRACT_CANONICAL = /^[A-Za-z][A-Za-z0-9+.-]*:[^\s|]+(?:\|[^\s|]+)?$/
-
-function validateEditionContracts(value: unknown): readonly string[] {
-  if (!Array.isArray(value) || value.length === 0) throw new BillingInputError('Catalog edition contracts must be a non-empty array; omit contracts on an edition that is not bound.')
-  for (const [index, canonical] of value.entries()) {
-    if (typeof canonical !== 'string' || !CONTRACT_CANONICAL.test(canonical)) throw new BillingInputError(`Catalog edition contract ${index} must be an absolute canonical, optionally |version.`)
-  }
-  if (new Set(value).size !== value.length) throw new BillingInputError('Catalog edition contracts must be unique.')
-  return [...value] as string[]
-}
-
-/** The `depends-on` links a contract-bound edition carries: one per manifest Contract, sorted; none on an unbound edition. */
-function editionContractLinks(manifest: BillingCatalogEditionManifestV1): { readonly type: 'depends-on'; readonly resource: string }[] {
-  return [...(manifest.contracts ?? [])].sort().map((resource) => ({ type: 'depends-on' as const, resource }))
-}
-
-/**
- * Refuses a catalog edition whose `depends-on` links are not exactly its manifest's `contracts`: a
- * contract-bound edition names its Contracts in both, an unbound edition in neither, and an edition bound
- * by one and unbound by the other is refused.
- */
-function requireEditionContractLinks(links: readonly BillingLibraryRelatedArtifact[], manifest: BillingCatalogEditionManifestV1): void {
-  const named = links.filter((link) => link.type === 'depends-on').map((link) => link.resource)
-  const declared = new Set(manifest.contracts ?? [])
-  if (new Set(named).size !== named.length || named.length !== declared.size || named.some((contract) => !declared.has(contract))) {
-    throw new BillingInputError('Catalog edition depends-on links must name exactly the Contract canonicals of its manifest contracts; an edition is contract-bound by both or by neither.')
-  }
-}
-
 function validateManifest(value: unknown): BillingCatalogEditionManifestV1 {
   if (!isRecord(value)) throw new BillingInputError('Edition manifest must be an object.')
-  // `contracts` is present only on a contract-bound edition; an unbound edition keeps its earlier manifest.
-  requireOnlyKeys(value, ['schemaVersion', 'kind', 'catalogScope', 'publicationPeriod', 'sources', ...(Object.hasOwn(value, 'contracts') ? ['contracts'] : [])], 'Edition manifest')
+  requireOnlyKeys(value, ['schemaVersion', 'kind', 'catalogScope', 'publicationPeriod', 'sources'], 'Edition manifest')
   if (value.schemaVersion !== 1 || value.kind !== 'billing-catalog-edition') throw new BillingInputError('Edition manifest schema is unsupported.')
   if (!Array.isArray(value.sources) || value.sources.length === 0) throw new BillingInputError('Catalog edition sources are required.')
   const sources = value.sources.map((source, index) => validateCatalogSource(source, index))
@@ -460,7 +406,6 @@ function validateManifest(value: unknown): BillingCatalogEditionManifestV1 {
     catalogScope: requireText(value.catalogScope, 'Catalog edition catalogScope'),
     publicationPeriod: validatePeriod(value.publicationPeriod, 'Catalog edition publicationPeriod'),
     sources,
-    ...(Object.hasOwn(value, 'contracts') ? { contracts: validateEditionContracts(value.contracts) } : {}),
   }
 }
 
@@ -532,8 +477,7 @@ function decodeContent(resource: Record<string, unknown>, contentType: string): 
 }
 
 /** The links as written; each kind checks the form of its link targets. */
-type EntryExtensions = { configuredRuleMembersDigest?: string; catalogDefinitionDigest?: string; catalogDefinitionCoding?: string }
-type DecodedLink = BillingLibraryRelatedArtifact & Readonly<EntryExtensions>
+type DecodedLink = BillingLibraryRelatedArtifact & { readonly configuredRuleMembersDigest?: string; readonly catalogDefinitionDigest?: string }
 
 function decodeLinks(resource: Record<string, unknown>): DecodedLink[] {
   if (resource.relatedArtifact === undefined) return []
@@ -549,33 +493,21 @@ function decodeLinks(resource: Record<string, unknown>): DecodedLink[] {
   })
 }
 
-const ENTRY_DIGEST_EXTENSIONS: Readonly<Record<string, keyof EntryExtensions>> = {
-  [BILLING_CATALOG_DEFINITION_CODING_EXTENSION]: 'catalogDefinitionCoding',
+const ENTRY_DIGEST_EXTENSIONS: Readonly<Record<string, 'configuredRuleMembersDigest' | 'catalogDefinitionDigest'>> = {
   [BILLING_CONFIGURED_RULE_MEMBERS_DIGEST_EXTENSION]: 'configuredRuleMembersDigest',
   [BILLING_CATALOG_DEFINITION_DIGEST_EXTENSION]: 'catalogDefinitionDigest',
 }
 
-/** A billed coding as an entry carries it: `system|code`, a system without whitespace or `|` and a non-empty code. */
-const ENTRY_CODING = /^[^\s|]+\|.+$/
-
-/**
- * The extensions of an edition's composed-of entry, each once: the configured-rule members digest, the
- * catalog definition digest and, on a contract-bound edition, the catalog definition coding.
- */
-function entryDigestsOf(value: unknown, label: string): EntryExtensions {
-  if (!Array.isArray(value) || value.length === 0 || value.length > 3) throw new BillingInputError(`${label} must carry one to three entry extensions.`)
-  const digests: EntryExtensions = {}
+/** The digest extensions of an edition's composed-of entry: the configured-rule members digest, the catalog definition digest, or both, each once. */
+function entryDigestsOf(value: unknown, label: string): { configuredRuleMembersDigest?: string; catalogDefinitionDigest?: string } {
+  if (!Array.isArray(value) || value.length === 0 || value.length > 2) throw new BillingInputError(`${label} must carry one or two entry digest extensions.`)
+  const digests: { configuredRuleMembersDigest?: string; catalogDefinitionDigest?: string } = {}
   for (const extension of value) {
     if (!isRecord(extension)) throw new BillingInputError(`${label} extension must be an object.`)
     requireOnlyKeys(extension, ['url', 'valueString'], `${label} extension`)
     const field = typeof extension.url === 'string' && Object.hasOwn(ENTRY_DIGEST_EXTENSIONS, extension.url) ? ENTRY_DIGEST_EXTENSIONS[extension.url]! : undefined
-    if (field === undefined) throw new BillingInputError(`${label} extension is neither the configured-rule members digest, the catalog definition digest nor the catalog definition coding.`)
+    if (field === undefined) throw new BillingInputError(`${label} extension is neither the configured-rule members digest nor the catalog definition digest.`)
     if (digests[field] !== undefined) throw new BillingInputError(`${label} carries the ${field} extension more than once.`, { cause: 'duplicate' })
-    if (field === 'catalogDefinitionCoding') {
-      if (typeof extension.valueString !== 'string' || !ENTRY_CODING.test(extension.valueString)) throw new BillingInputError(`${label} catalogDefinitionCoding must be system|code.`)
-      digests[field] = extension.valueString
-      continue
-    }
     if (typeof extension.valueString !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(extension.valueString)) {
       throw new BillingInputError(`${label} ${field} must be a lowercase SHA-256 digest.`, { cause: 'digest-invalid' })
     }
@@ -586,7 +518,7 @@ function entryDigestsOf(value: unknown, label: string): EntryExtensions {
 
 /** Refuses entry digests on any Library other than a catalog edition. */
 function requireNoEntryDigests(links: readonly DecodedLink[], label: string): void {
-  if (links.some((link) => link.configuredRuleMembersDigest !== undefined || link.catalogDefinitionDigest !== undefined || link.catalogDefinitionCoding !== undefined)) {
+  if (links.some((link) => link.configuredRuleMembersDigest !== undefined || link.catalogDefinitionDigest !== undefined)) {
     throw new BillingInputError(`${label} links must not carry a configured-rule members or catalog definition digest.`)
   }
 }
@@ -616,60 +548,12 @@ function requireNoMembersDigest(links: readonly DecodedLink[], label: string): v
 
 /** Catalog-edition links name a catalog member as `canonical|version`, with its entry digests when it has them. */
 function memberLinks(links: readonly DecodedLink[]): BillingCatalogEditionMemberLink[] {
-  return links.filter((link) => link.type === 'composed-of').map((link, index) => ({
+  return links.map((link, index) => ({
     type: 'composed-of' as const,
     resource: canonicalVersion(link.resource, `Billing Library link ${index}`),
     ...(link.configuredRuleMembersDigest === undefined ? {} : { configuredRuleMembersDigest: link.configuredRuleMembersDigest }),
     ...(link.catalogDefinitionDigest === undefined ? {} : { catalogDefinitionDigest: link.catalogDefinitionDigest }),
-    ...(link.catalogDefinitionCoding === undefined ? {} : { catalogDefinitionCoding: link.catalogDefinitionCoding }),
   }))
-}
-
-/**
- * Refuses an edition whose entry codings do not match its binding: a contract-bound edition's every
- * catalog definition entry carries its coding and no other entry does; an unbound edition's entries carry
- * none.
- */
-function requireEntryCodings(members: readonly BillingCatalogEditionMemberLink[], bound: boolean): void {
-  const invalid = members.find((member) => (member.catalogDefinitionCoding !== undefined) !== (bound && member.catalogDefinitionDigest !== undefined))
-  if (invalid !== undefined) {
-    throw new BillingInputError(bound
-      ? `Contract-bound catalog edition entry ${invalid.resource} must carry the catalog definition coding exactly when it is a catalog definition.`
-      : `Catalog edition entry ${invalid.resource} carries a catalog definition coding, which only a contract-bound edition carries.`)
-  }
-}
-
-/**
- * Refuses a contract-bound edition built from an incomplete inventory: every member must be a given
- * catalog definition (whose entry then carries its digest and coding), the given rule-set Library or a
- * given configured-rule Library. A definition member left without its digest and coding could otherwise
- * make the edition look as if it did not hold a coding, and a line fall back to another edition's price
- * (cognovis/fhir-billing-core#127).
- */
-function requireBoundInventory(members: readonly string[], definitionDigests: ReadonlyMap<string, string>, ruleSet: unknown, configuredRules: readonly unknown[] | undefined): void {
-  const libraries = new Set<string>()
-  const given: [unknown, 'rule-set' | 'configured-rule'][] = [
-    ...(ruleSet === undefined ? [] : [[ruleSet, 'rule-set'] as [unknown, 'rule-set']]),
-    ...(configuredRules ?? []).map((library) => [library, 'configured-rule'] as [unknown, 'configured-rule']),
-  ]
-  for (const [library, kind] of given) {
-    const decoded = decodeBillingLibrary(library)
-    if (decoded.kind !== kind) throw new BillingInputError(`Contract-bound catalog edition ${kind === 'rule-set' ? 'ruleSet' : 'configuredRules'} must be ${kind} Libraries.`)
-    libraries.add(`${decoded.url}|${decoded.version}`)
-  }
-  const unaccounted = members.find((member) => !definitionDigests.has(member) && !libraries.has(member))
-  if (unaccounted !== undefined) {
-    throw new BillingInputError(`Contract-bound catalog edition member ${unaccounted} is neither a given catalog definition nor the given ruleSet or configuredRules; a contract-bound edition is built from its whole inventory.`)
-  }
-}
-
-/** The single billed coding of a catalog definition, as `system|code`. */
-function definitionCodingKey(definition: Record<string, unknown>, label: string): string {
-  const codings = isRecord(definition.code) && Array.isArray(definition.code.coding) ? definition.code.coding : []
-  if (codings.length !== 1 || !isRecord(codings[0])) throw new BillingInputError(`${label} of a contract-bound edition must carry exactly one coding.`)
-  const key = `${requireText(codings[0].system, `${label} coding system`)}|${requireText(codings[0].code, `${label} coding code`)}`
-  if (!ENTRY_CODING.test(key)) throw new BillingInputError(`${label} coding must be system|code.`)
-  return key
 }
 
 /**
@@ -831,12 +715,9 @@ export function decodeBillingLibrary(input: unknown): DecodedBillingLibrary {
   const links = decodeLinks(resource)
   if (kind === 'catalog-edition') {
     if (libraryType(resource) !== 'asset-collection') throw new BillingInputError('Catalog edition Library type must be asset-collection.')
-    if (!links.some((link) => link.type === 'composed-of')) throw new BillingInputError('Catalog edition links must be non-empty composed-of canonical versions.')
+    if (links.length === 0 || links.some((link) => link.type !== 'composed-of')) throw new BillingInputError('Catalog edition links must be non-empty composed-of canonical versions.')
     const members = memberLinks(links)
     const payload = validateManifest(decodeContent(resource, BILLING_CATALOG_EDITION_MIME))
-    requireEditionContractLinks(links, payload)
-    const { contracts } = payload
-    requireEntryCodings(members, contracts !== undefined)
     const ruleCompleteness = ruleCompletenessOf(resource)
     if (ruleCompleteness === undefined) requireNoMembersDigest(members, 'Catalog edition without a rule completeness declaration')
     const sourceDigest = oneIdentifier(resource, BILLING_SOURCE_PUBLICATION_DIGEST_SYSTEM, 'Catalog source-set digest')
@@ -846,7 +727,7 @@ export function decodeBillingLibrary(input: unknown): DecodedBillingLibrary {
       throw new BillingInputError('Source-set digest does not match the manifest.', { cause: 'digest-mismatch' })
     }
     const digest = oneIdentifier(resource, BILLING_MEMBER_SET_DIGEST_SYSTEM, 'Catalog member-set digest')
-    if (digest !== billingCatalogEditionDigest(members, contracts)) {
+    if (digest !== billingCatalogEditionDigest(members)) {
       // An edition produced before member-set digest scheme 2 is refused as such: it must be re-imported
       // with its definition digests and re-admitted (cognovis/fhir-billing-core#165).
       if (digest === billingCatalogMemberSetDigest(members.map((link) => link.resource))) {
@@ -863,7 +744,7 @@ export function decodeBillingLibrary(input: unknown): DecodedBillingLibrary {
       ...(effectivePeriod ? { effectivePeriod } : {}),
       publisher: requireText(resource.publisher, 'Catalog edition publisher'),
       payload,
-      relatedArtifacts: members,
+      relatedArtifacts: members as BillingCatalogEditionLibraryInput['relatedArtifacts'],
       ...(ruleCompleteness === undefined ? {} : { ruleCompleteness }),
       digest,
       resource,
@@ -916,13 +797,9 @@ export function buildBillingLibrary(input: BuildBillingLibraryInput): BillingLib
   let resource: BillingLibraryResource
   if (input.kind === 'catalog-edition') {
     const payload = validateManifest(input.payload)
-    // A contract-bound edition's depends-on links are written from its manifest, never given.
-    if (input.relatedArtifacts.length === 0 || input.relatedArtifacts.some((link) => link.type !== 'composed-of')) throw new BillingInputError('Catalog edition links must be non-empty composed-of canonical versions.')
     const plain = input.relatedArtifacts.map((link, index) => ({ type: link.type, resource: canonicalVersion(link.resource, `Catalog edition link ${index}`) }))
-    const contractLinks = editionContractLinks(payload)
-    const { contracts } = payload
-    // A contract-bound edition names its rule-set and configured-rule Libraries for its inventory.
-    if (input.ruleCompleteness === undefined && (input.definitions !== undefined || (contracts === undefined && (input.configuredRules !== undefined || input.ruleSet !== undefined)))) {
+    if (plain.length === 0 || plain.some((link) => link.type !== 'composed-of')) throw new BillingInputError('Catalog edition links must be non-empty composed-of canonical versions.')
+    if (input.ruleCompleteness === undefined && (input.configuredRules !== undefined || input.definitions !== undefined || input.ruleSet !== undefined)) {
       throw new BillingInputError('Catalog edition configuredRules, definitions and ruleSet belong to a rule completeness declaration.')
     }
     if (input.ruleCompleteness !== undefined && (!Array.isArray(input.configuredRules) || !Array.isArray(input.definitions))) {
@@ -931,31 +808,23 @@ export function buildBillingLibrary(input: BuildBillingLibraryInput): BillingLib
     const memberSet = new Set(plain.map((link) => link.resource))
     const digests = input.ruleCompleteness === undefined ? new Map<string, string>() : configuredRuleMembersDigests(input.configuredRules!, input.definitions!, input.ruleSet, memberSet)
     const definitionDigests = catalogDefinitionDigests(input.catalogDefinitions, memberSet)
-    // A contract-bound edition names each definition's coding on its entry (cognovis/fhir-billing-core#127).
-    const definitionCodings = new Map<string, string>(contracts === undefined ? [] : (input.catalogDefinitions as Record<string, unknown>[]).map((definition, index) => (
-      [`${String(definition.url)}|${String(definition.version)}`, definitionCodingKey(definition, `Catalog definition ${index}`)] as const
-    )))
     // A declaring edition names its whole definition inventory: each must come with its content.
-    if (contracts !== undefined) requireBoundInventory(plain.map((link) => link.resource), definitionDigests, input.ruleSet, input.configuredRules)
     const unpriced = (input.definitions ?? []).find((definition) => !definitionDigests.has(definition.canonical))
     if (unpriced !== undefined) throw new BillingInputError(`Catalog definition ${unpriced.canonical} is in definitions but missing from catalogDefinitions.`)
     const members: BillingCatalogEditionMemberLink[] = plain.map((link) => {
       const catalogDefinitionDigest = definitionDigests.get(link.resource)
       const configuredRuleMembersDigest = digests.get(link.resource)
-      const catalogDefinitionCoding = definitionCodings.get(link.resource)
       return {
         type: 'composed-of',
         resource: link.resource,
         ...(catalogDefinitionDigest === undefined ? {} : { catalogDefinitionDigest }),
         ...(configuredRuleMembersDigest === undefined ? {} : { configuredRuleMembersDigest }),
-        ...(catalogDefinitionCoding === undefined ? {} : { catalogDefinitionCoding }),
       }
     })
     const links = members.map((member) => {
       const extension = [
         ...(member.catalogDefinitionDigest === undefined ? [] : [{ url: BILLING_CATALOG_DEFINITION_DIGEST_EXTENSION, valueString: member.catalogDefinitionDigest }]),
         ...(member.configuredRuleMembersDigest === undefined ? [] : [{ url: BILLING_CONFIGURED_RULE_MEMBERS_DIGEST_EXTENSION, valueString: member.configuredRuleMembersDigest }]),
-        ...(member.catalogDefinitionCoding === undefined ? [] : [{ url: BILLING_CATALOG_DEFINITION_CODING_EXTENSION, valueString: member.catalogDefinitionCoding }]),
       ]
       return extension.length === 0 ? { type: member.type, resource: member.resource } : { type: member.type, resource: member.resource, extension }
     })
@@ -970,10 +839,10 @@ export function buildBillingLibrary(input: BuildBillingLibraryInput): BillingLib
       identifier: [
         { system: BILLING_ARTIFACT_KIND_SYSTEM, value: input.kind },
         { system: BILLING_SOURCE_PUBLICATION_DIGEST_SYSTEM, value: sourceSetDigest },
-        { system: BILLING_MEMBER_SET_DIGEST_SYSTEM, value: billingCatalogEditionDigest(members, contracts) },
+        { system: BILLING_MEMBER_SET_DIGEST_SYSTEM, value: billingCatalogEditionDigest(members) },
         ...(input.ruleCompleteness === undefined ? [] : [{ system: BILLING_RULE_COMPLETENESS_SYSTEM, value: requireRuleCompleteness(input.ruleCompleteness) }]),
       ],
-      relatedArtifact: [...links, ...contractLinks],
+      relatedArtifact: links,
       content: [{ contentType: BILLING_CATALOG_EDITION_MIME, data: manifestData }],
     }
   } else if (input.kind === 'configured-rule') {

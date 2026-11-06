@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.40.1] - 2026-11-06
+
+Maintenance release from the branch `release/0.40.x`, cut from the public 0.41.1 tree with the 0.40.0 engine sources. It is not on `main` and does not contain the 0.41.0 contract-bound editions or 0.42.0.
+
+### Removed
+
+- **cognovis/fhir-billing-core#20**: `@cognovis/fhir-billing-types`, `-rules` and `-engine` 0.40.1 no longer declare the optional peer dependency on `@cognovis/fhir-sdk`, as in 0.41.1 (#212). npm treated an installed `@cognovis/fhir-sdk` 0.24.x as a conflict with the 0.40.0 peer range (`ERESOLVE`). With 0.40.1, a project can install `@cognovis/fhir-billing-sdk`, which stays on engine `^0.40.0`, next to `@cognovis/fhir-sdk` 0.24.0 (cognovis/chp#2073). The packed `dist` equals 0.40.0's apart from `BILLING_CORE_VERSION` and `BILLING_ENGINE_VERSION`; evaluation is unchanged. Engine records carry `engineVersion` `0.40.1`.
+- Published under the fresh `fbc-20-billing-0-40-1` npm tag. `latest` and the GitHub latest release stay where they are.
+
 ## [0.41.1] - 2026-11-06
 
 ### Removed

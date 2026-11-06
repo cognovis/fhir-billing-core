@@ -11,7 +11,7 @@ export {
   type R4Resource,
 } from './generated.js'
 
-export const BILLING_CORE_VERSION = '0.41.1' as const
+export const BILLING_CORE_VERSION = '0.40.1' as const
 export const BILLING_RULE_SEMANTIC_MAJOR = 4 as const
 export const BILLING_RULE_PAYLOAD_SCHEMA_VERSION = 2 as const
 export const BILLING_ARTIFACT_KIND_SYSTEM = 'https://fhir.cognovis.de/billing-core/sid/artifact-kind' as const
@@ -48,14 +48,6 @@ export const BILLING_CONFIGURED_RULE_MEMBERS_DIGEST_EXTENSION = 'https://fhir.co
  * prices (member-set digest v2, cognovis/fhir-billing-core#165).
  */
 export const BILLING_CATALOG_DEFINITION_DIGEST_EXTENSION = 'https://fhir.cognovis.de/billing-core/extension/catalog-definition-digest' as const
-/**
- * The extension on a contract-bound catalog edition's `composed-of` entry of a catalog definition
- * (cognovis/fhir-billing-core#127): `valueString` is the definition's billed coding as `system|code`. The
- * member-set digest of a contract-bound edition covers it, so which codings the edition holds is decided
- * from the admitted edition alone, not from a code search a store writer could change. Absent on an unbound
- * edition.
- */
-export const BILLING_CATALOG_DEFINITION_CODING_EXTENSION = 'https://fhir.cognovis.de/billing-core/extension/catalog-definition-coding' as const
 export type BillingRuleCompleteness = typeof BILLING_RULE_COMPLETENESS_CONFIGURED_RULE_PER_CODE
 /**
  * Admission record (`Provenance`): a tenant's admission of one catalog-edition, contract or overlay
@@ -396,14 +388,6 @@ export interface BillingCatalogEditionManifestV1 {
   readonly catalogScope: string
   readonly publicationPeriod: { readonly start: string; readonly end?: string }
   readonly sources: readonly BillingCatalogSource[]
-  /**
-   * The Contracts a contract-bound edition applies to (cognovis/fhir-billing-core#127): a non-empty list
-   * of unique Contract canonicals, each a `Contract.url` or `Contract.instantiatesUri` value, optionally
-   * `|version` (the `Contract.version`). The edition Library carries one `depends-on` link per Contract and
-   * no other, and the member-set digest covers the list, so the admission record binds the assignment.
-   * Absent on an unbound edition, whose member-set digest is unchanged.
-   */
-  readonly contracts?: readonly string[]
 }
 
 export interface BillingConfiguredRulePayloadV2 {
