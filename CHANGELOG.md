@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.42.3] - 2026-11-06
+
+### Fixed
+
+- Prepare the neutral-header release with a DCO-signed release commit and
+  consistent publication metadata. Preserve the unsuccessful 0.42.1 and
+  0.42.2 release tags unchanged.
+
 ## [0.42.2] - 2026-11-06
 
 ### Fixed
