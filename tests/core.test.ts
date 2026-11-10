@@ -1514,22 +1514,22 @@ describe('neutral rule contract', () => {
     )
   })
 
-  // cognovis/fhir-billing-core#33: the KV values TSVG case markers such as 99873A at 0.00 EUR on purpose.
+  // cognovis/fhir-billing-core#33: a publisher may value a code at 0.00 on purpose.
   it('prices a line at 0.00 when the catalog table publishes 0.00 for its code', () => {
     const prices = {
       edition: 'synthetic-2026',
       digest: 'sha256:catalog',
       currency: 'EUR',
       prices: [
-        { system: 'https://example.invalid/system/service', code: '99873A', unitPrice: '0.00' },
+        { system: 'https://example.invalid/system/service', code: 'Z0', unitPrice: '0.00' },
         { system: 'https://example.invalid/system/service', code: 'P', unitPriceUnknown: true as const },
       ],
     }
     const unresolved: BillingCase = {
       ...baseCase,
       lines: [
-        { id: 'placeholder', code: { system: 'https://example.invalid/system/service', code: '99873A' }, quantity: 2, unitPrice: { value: '0.00', currency: 'EUR' } },
-        { id: 'unknown', code: { system: 'https://example.invalid/system/service', code: '99873A' }, quantity: 1, unitPriceUnknown: true },
+        { id: 'placeholder', code: { system: 'https://example.invalid/system/service', code: 'Z0' }, quantity: 2, unitPrice: { value: '0.00', currency: 'EUR' } },
+        { id: 'unknown', code: { system: 'https://example.invalid/system/service', code: 'Z0' }, quantity: 1, unitPriceUnknown: true },
         { id: 'points', code: { system: 'https://example.invalid/system/service', code: 'P' }, quantity: 1, unitPrice: { value: '0.00', currency: 'EUR' } },
       ],
     }
@@ -1543,7 +1543,7 @@ describe('neutral rule contract', () => {
       schemaVersion: 2,
       semanticMajor: 4,
       id: 'portable-rules',
-      rules: [{ id: 'value', class: 'value-limit', mustUnderstand: true, effect: 'reject', priority: 1, parameters: { selector: { codes: ['99873A'] }, maximum: '0.00' } }],
+      rules: [{ id: 'value', class: 'value-limit', mustUnderstand: true, effect: 'reject', priority: 1, parameters: { selector: { codes: ['Z0'] }, maximum: '0.00' } }],
     })
     const result = evaluateBillingCase(compileRuleSet(rules, completeAdmission), { ...resolved, lines: resolved.lines.slice(0, 2) })
     assert.equal(result.outcome, 'accepted')
@@ -1554,7 +1554,7 @@ describe('neutral rule contract', () => {
       edition: 'synthetic-2026',
       digest: 'sha256:catalog',
       currency: 'EUR',
-      prices: [{ system: 'https://example.invalid/system/service', code: '99873A', unitPrice: '0.00' }],
+      prices: [{ system: 'https://example.invalid/system/service', code: 'Z0', unitPrice: '0.00' }],
     }
     for (const line of [
       { id: 'a', code: { system: 'https://example.invalid/system/service', code: 'A' }, quantity: 1, unitPrice: { value: '0.00', currency: 'EUR' } },
