@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.43.0] - 2026-11-10
+
+### Changed
+
+- `resolveCatalogUnitPrices` prices a line at 0.00 when the catalog table
+  publishes 0.00 for its code, instead of refusing the evaluation. A code
+  without a table entry still fails closed, and a `unitPriceUnknown` entry
+  still leaves the line unknown. ADR-004 no longer forbids a zero amount
+  (cognovis/fhir-billing-core#33).
+
 ## [0.42.4] - 2026-11-06
 
 ### Added
