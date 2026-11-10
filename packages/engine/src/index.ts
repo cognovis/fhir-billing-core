@@ -1146,7 +1146,8 @@ export interface CatalogPriceTable {
 /**
  * Fills each catalog-priced line from the table: a line with a numeric-zero placeholder or the
  * `unitPriceUnknown` marker takes its entry's unit price, or becomes `unitPriceUnknown: true` when
- * the entry has points only. A line with a non-zero unit price keeps it.
+ * the entry has points only. A line with a non-zero unit price keeps it. An entry of 0.00 is a
+ * published price and fills the line with 0.00; a code without an entry fails closed.
  */
 export function resolveCatalogUnitPrices(
   input: BillingCase,
@@ -1166,7 +1167,6 @@ export function resolveCatalogUnitPrices(
       const { unitPrice: _placeholder, unitPriceUnknown: _unknown, ...rest } = line
       if (hit.unitPriceUnknown === true && hit.unitPrice === undefined) return { ...rest, unitPriceUnknown: true }
       if (hit.unitPriceUnknown !== undefined || hit.unitPrice === undefined || !/^-?\d+(\.\d{1,2})?$/.test(hit.unitPrice)) throw new BillingInputError(`Catalog unit price for ${hit.code} must use a decimal string with at most two fraction digits.`)
-      if (decimalMinor(hit.unitPrice) === 0n) throw new BillingInputError(`Line ${line.id} catalog unit price for ${line.code.code} is zero.`)
       if (!prices.currency) throw new BillingInputError(`Catalog unit price for ${hit.code} requires a table currency.`)
       return { ...rest, unitPrice: { value: hit.unitPrice, currency: prices.currency } }
     }),

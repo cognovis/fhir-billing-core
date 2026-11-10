@@ -1514,25 +1514,56 @@ describe('neutral rule contract', () => {
     )
   })
 
-  it('fails closed when the catalog table prices a required line at zero', () => {
+  // cognovis/fhir-billing-core#33: the KV values TSVG case markers such as 99873A at 0.00 EUR on purpose.
+  it('prices a line at 0.00 when the catalog table publishes 0.00 for its code', () => {
     const prices = {
       edition: 'synthetic-2026',
       digest: 'sha256:catalog',
       currency: 'EUR',
-      prices: [{ system: 'https://example.invalid/system/service', code: 'A', unitPrice: '0.00' }],
+      prices: [
+        { system: 'https://example.invalid/system/service', code: '99873A', unitPrice: '0.00' },
+        { system: 'https://example.invalid/system/service', code: 'P', unitPriceUnknown: true as const },
+      ],
     }
     const unresolved: BillingCase = {
       ...baseCase,
-      lines: [{
-        id: 'a',
-        code: { system: 'https://example.invalid/system/service', code: 'A' },
-        quantity: 2,
-        unitPrice: { value: '0.00', currency: 'EUR' },
-      }],
+      lines: [
+        { id: 'placeholder', code: { system: 'https://example.invalid/system/service', code: '99873A' }, quantity: 2, unitPrice: { value: '0.00', currency: 'EUR' } },
+        { id: 'unknown', code: { system: 'https://example.invalid/system/service', code: '99873A' }, quantity: 1, unitPriceUnknown: true },
+        { id: 'points', code: { system: 'https://example.invalid/system/service', code: 'P' }, quantity: 1, unitPrice: { value: '0.00', currency: 'EUR' } },
+      ],
     }
-    assert.throws(
-      () => resolveCatalogUnitPrices(unresolved, prices, completeAdmission),
-      (error: unknown) => error instanceof BillingInputError && /catalog unit price for A is zero/.test(error.message),
-    )
+    const resolved = resolveCatalogUnitPrices(unresolved, prices, completeAdmission)
+    assert.deepEqual(resolved.lines.map((line) => [line.id, line.unitPrice, line.unitPriceUnknown]), [
+      ['placeholder', { value: '0.00', currency: 'EUR' }, undefined],
+      ['unknown', { value: '0.00', currency: 'EUR' }, undefined],
+      ['points', undefined, true],
+    ])
+    const rules = defineBillingRuleSet({
+      schemaVersion: 2,
+      semanticMajor: 4,
+      id: 'portable-rules',
+      rules: [{ id: 'value', class: 'value-limit', mustUnderstand: true, effect: 'reject', priority: 1, parameters: { selector: { codes: ['99873A'] }, maximum: '0.00' } }],
+    })
+    const result = evaluateBillingCase(compileRuleSet(rules, completeAdmission), { ...resolved, lines: resolved.lines.slice(0, 2) })
+    assert.equal(result.outcome, 'accepted')
+  })
+
+  it('still fails closed for a line without a table entry when another code is published at 0.00', () => {
+    const prices = {
+      edition: 'synthetic-2026',
+      digest: 'sha256:catalog',
+      currency: 'EUR',
+      prices: [{ system: 'https://example.invalid/system/service', code: '99873A', unitPrice: '0.00' }],
+    }
+    for (const line of [
+      { id: 'a', code: { system: 'https://example.invalid/system/service', code: 'A' }, quantity: 1, unitPrice: { value: '0.00', currency: 'EUR' } },
+      { id: 'a', code: { system: 'https://example.invalid/system/service', code: 'A' }, quantity: 1, unitPriceUnknown: true as const },
+    ]) {
+      assert.throws(
+        () => resolveCatalogUnitPrices({ ...baseCase, lines: [line] }, prices, completeAdmission),
+        (error: unknown) => error instanceof BillingInputError && /Line a has no catalog unit price for A/.test(error.message),
+      )
+    }
   })
 })

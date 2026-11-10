@@ -3,6 +3,8 @@
 **Status:** Accepted by cognovis/fhir-billing-core#214 (product owner decision,
 2026-11-03, cognovis/chp#1615 option 1). Supersedes ADR-003's exclusion of
 alternate prices; ADR-003's unvalued marker and single guarded base stay valid.
+Amended by cognovis/fhir-billing-core#33 (2026-11-10): a published amount of
+0.00 is a known price.
 
 KV-regional EBM editions price one GOP differently by payer group, provider
 type, fee schedule and payer. KV 71 prices 01100 at 24.97 EUR unconditionally
@@ -56,8 +58,21 @@ alternative names, through the existing fact-source projection:
 4. If none matches, the publisher base applies when the definition states one.
    Otherwise the unit price is unknown.
 
-An amount must be nonzero and have at most two fraction digits, the rule the
-engine applies to every catalog price.
+An amount must have at most two fraction digits, the rule the engine applies
+to every catalog price. An amount of exactly 0.00 that the publisher states is
+a known price of zero, and the engine's `resolveCatalogUnitPrices` fills a line
+from a table entry of 0.00 (amended by cognovis/fhir-billing-core#33). A
+missing table entry, a `unitPriceUnknown` entry, a points-only price and an
+unvalued marker stay unknown, never zero. A line's own 0.00 stays the
+placeholder that takes the table entry.
+
+The reason is that KVs value some codes at 0.00 on purpose. The KV 71 edition
+for Q4/2026 (SDEBM 851) values the TSVG case markers 99873A, 99873B, 99873H,
+99873O and 99873T at 0.00 EUR: a practice books them to mark a TSVG case, and
+the extra-budgetary TSVG payment for the case depends on the marker. That
+edition carries 343 GOPs with such a published zero row (SDEBM unit 2, value
+0), which differs from an unvalued row (unit 5). Refusing the zero amount
+withheld these codes and made the TSVG payment unclaimable.
 
 There is no missing-value default. The SDK never derives a fact and never
 falls back to the base while a fact is unknown. The selection record names

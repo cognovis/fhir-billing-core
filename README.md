@@ -1031,7 +1031,9 @@ unknown, not zero: a `value-limit` gives a selected line with it the
 before. `resolveCatalogUnitPrices` fills a line with a numeric-zero placeholder
 or the marker from the `CatalogPriceTable`: an entry with `unitPrice` prices it
 in the table `currency`, an entry with `unitPriceUnknown: true` (a points-only
-definition) leaves it unknown. A table entry carries exactly one of the two, and
+definition) leaves it unknown. An entry of `0.00` is a published price of zero
+and prices the line at 0.00; a code without an entry is a `BillingInputError`
+([ADR-004](docs/adr/ADR-004-guarded-price-alternatives.md)). A table entry carries exactly one of the two, and
 `currency` may be absent only when no entry has a `unitPrice`.
 
 ## Architecture and execution
