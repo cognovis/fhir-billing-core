@@ -268,7 +268,7 @@ export const RULE_SET_FIXTURES: readonly RuleSetFixture[] = [
   reject('contract participation with a duplicate contract', withParameters('contract-participation', { contracts: ['urn:a', 'urn:a'] }, ['contract'])),
   reject('contract participation with a numeric contract entry', withParameters('contract-participation', { contracts: ['urn:a', 1] }, ['contract'])),
   reject('contract participation with an empty contract entry', withParameters('contract-participation', { contracts: [''] }, ['contract'])),
-  reject('contract participation with a contract entry holding whitespace', withParameters('contract-participation', { contracts: ['urn:a urn:b'] }, ['contract'])),
+  accept('contract participation with contract entries holding whitespace', withParameters('contract-participation', { contracts: ['Plan A', 'Plan B'] }, ['contract'])),
   reject('contract participation with contracts as a string', withParameters('contract-participation', { contracts: 'urn:a' }, ['contract'])),
   reject('contract code list permitting "*"', withParameters('contract-code-list', { permitted: { codes: ['*'] } })),
   reject('unknown contract code list member', withParameters('contract-code-list', { permitted: { codes: ['A100'], display: 'x' } })),

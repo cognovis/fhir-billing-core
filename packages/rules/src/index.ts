@@ -378,10 +378,10 @@ function assertRuleParameters(rule: BillingRule): void {
     if (hasContract) {
       if (typeof parameters.contract !== 'string' || !parameters.contract) throw new BillingInputError(`Rule ${rule.id} contract must be non-empty.`)
     } else {
-      // The engine reports the list space-separated in the finding details, so an entry holds no whitespace.
       const contracts = parameters.contracts
       if (!Array.isArray(contracts) || contracts.length === 0) throw new BillingInputError(`Rule ${rule.id} contracts must be a non-empty array.`)
-      if (contracts.some((item) => typeof item !== 'string' || !/^\S+$/.test(item))) throw new BillingInputError(`Rule ${rule.id} contracts entries must be non-empty strings without whitespace.`)
+      // Array.from visits every position, so a hole in a sparse array is refused like any other non-string.
+      if (Array.from(contracts).some((item) => typeof item !== 'string' || !item)) throw new BillingInputError(`Rule ${rule.id} contracts entries must be non-empty strings.`)
       if (new Set(contracts).size !== contracts.length) throw new BillingInputError(`Rule ${rule.id} contracts must be unique.`)
     }
   } else if (rule.class === 'contract-code-list') {

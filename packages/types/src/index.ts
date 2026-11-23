@@ -11,7 +11,7 @@ export {
   type R4Resource,
 } from './generated.js'
 
-export const BILLING_CORE_VERSION = '0.42.0' as const
+export const BILLING_CORE_VERSION = '0.44.0' as const
 export const BILLING_RULE_SEMANTIC_MAJOR = 4 as const
 export const BILLING_RULE_PAYLOAD_SCHEMA_VERSION = 2 as const
 export const BILLING_ARTIFACT_KIND_SYSTEM = 'https://fhir.cognovis.de/billing-core/sid/artifact-kind' as const
@@ -274,9 +274,9 @@ export interface BillingRuleProvenance {
 /**
  * The parameters of a `contract-participation` rule. Exactly one of `contract` and `contracts` is
  * present; the rules package refuses a rule with both or neither. `contract` names the one contract
- * the case must participate in. `contracts` (non-empty, unique, no whitespace in an entry) passes the
- * rule when the case participates in any one of them; a rejected line's `CONTRACT_PARTICIPATION_REQUIRED`
- * finding then carries `details.contracts`, the entries space-separated in configured order. A
+ * the case must participate in. `contracts` (non-empty, unique, non-empty strings) passes the rule
+ * when the case participates in any one of them; a rejected line's `CONTRACT_PARTICIPATION_REQUIRED`
+ * finding then carries `details.contracts`, the entries as a JSON array string in configured order. A
  * `contract` rule's finding carries no details. A type alias, so a value of it fits `BillingRule.parameters`.
  */
 export type BillingContractParticipationParameters = {

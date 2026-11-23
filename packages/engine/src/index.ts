@@ -688,7 +688,8 @@ function evaluateClass(rule: BillingRule, input: BillingCase, lines: readonly Bi
         return input.contracts?.includes(String(parameters.contract)) ? [] : findings(lines.map((line) => reason('CONTRACT_PARTICIPATION_REQUIRED', rule, line)))
       }
       if (contracts.some((contract) => input.contracts?.includes(contract))) return []
-      const details = { contracts: contracts.join(' ') }
+      // Details hold scalars only: the list is a JSON array string, unambiguous for any contract string.
+      const details = { contracts: JSON.stringify(contracts) }
       return findings(lines.map((line) => reason('CONTRACT_PARTICIPATION_REQUIRED', rule, line, details)))
     }
     case 'contract-code-list': {

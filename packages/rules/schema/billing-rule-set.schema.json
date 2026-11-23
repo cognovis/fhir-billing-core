@@ -274,11 +274,8 @@
           "selector": { "$ref": "#/$defs/selector" },
           "contract": { "description": "The contract the case must participate in. Exactly one of contract and contracts.", "$ref": "#/$defs/nonEmptyString" },
           "contracts": {
-            "description": "The contracts of which the case must participate in at least one: unique strings without whitespace. Exactly one of contract and contracts. A rejected line's details name them in contracts, space-separated in this order.",
-            "type": "array",
-            "minItems": 1,
-            "uniqueItems": true,
-            "items": { "type": "string", "pattern": "^\\S+$" }
+            "description": "The contracts of which the case must participate in at least one: unique non-empty strings. Exactly one of contract and contracts. A rejected line's details name them in contracts, as a JSON array string in this order.",
+            "$ref": "#/$defs/uniqueStrings"
           },
           "countingScope": { "$ref": "#/$defs/countingScope" },
           "exceptWhen": { "$ref": "#/$defs/exceptWhen" },

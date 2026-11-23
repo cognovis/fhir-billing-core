@@ -35,11 +35,18 @@ describe('contract-participation with several contracts', () => {
     for (const contracts of [['urn:c'], [], undefined]) {
       const result = evaluate(anyOf, caseWith(contracts))
       assert.equal(result.outcome, 'rejected', String(contracts))
-      assert.deepEqual(result.axisReasons, [{ code: 'CONTRACT_PARTICIPATION_REQUIRED', ruleId: 'p', lineId: 'x', details: { contracts: 'urn:a urn:b' } }])
+      assert.deepEqual(result.axisReasons, [{ code: 'CONTRACT_PARTICIPATION_REQUIRED', ruleId: 'p', lineId: 'x', details: { contracts: '["urn:a","urn:b"]' } }])
     }
   })
 
-  it('refuses a rule with both, neither, an empty, duplicate, non-string, empty-string or whitespace entry, naming the rule', () => {
+  it('accepts any non-empty contract string, whitespace included, and names it unambiguously', () => {
+    const plans = { selector: { codes: ['X'] }, contracts: ['Plan A', 'Plan B'] }
+    assert.equal(evaluate(plans, caseWith(['Plan B'])).outcome, 'accepted')
+    const rejected = evaluate(plans, caseWith(['Plan']))
+    assert.deepEqual(rejected.axisReasons.map((item) => JSON.parse(String(item.details?.contracts))), [['Plan A', 'Plan B']])
+  })
+
+  it('refuses a rule with both, neither, an empty, duplicate, non-string, empty-string or missing entry, naming the rule', () => {
     const refused: Record<string, unknown>[] = [
       { selector: { codes: ['X'] }, contract: 'urn:a', contracts: ['urn:b'] },
       { selector: { codes: ['X'] } },
@@ -47,7 +54,8 @@ describe('contract-participation with several contracts', () => {
       { selector: { codes: ['X'] }, contracts: ['urn:a', 'urn:a'] },
       { selector: { codes: ['X'] }, contracts: ['urn:a', 1] },
       { selector: { codes: ['X'] }, contracts: ['urn:a', ''] },
-      { selector: { codes: ['X'] }, contracts: ['urn:a urn:b'] },
+      { selector: { codes: ['X'] }, contracts: new Array<string>(1) },
+      { selector: { codes: ['X'] }, contracts: ['urn:a', , 'urn:b'] },
       { selector: { codes: ['X'] }, contracts: 'urn:a' },
     ]
     for (const parameters of refused) {

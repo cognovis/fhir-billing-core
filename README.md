@@ -390,7 +390,7 @@ Require participation in a configured contract, or in any one of several.
 | --- | --- | --- |
 | `selector` | yes | The codes the rule applies to: literal codes, or "*" as the only code for every code (within system when given). |
 | `contract` | one of `contract`, `contracts` | The contract the case must participate in. Exactly one of contract and contracts. |
-| `contracts` | one of `contract`, `contracts` | The contracts of which the case must participate in at least one: unique strings without whitespace. Exactly one of contract and contracts. A rejected line's details name them in contracts, space-separated in this order. |
+| `contracts` | one of `contract`, `contracts` | The contracts of which the case must participate in at least one: unique non-empty strings. Exactly one of contract and contracts. A rejected line's details name them in contracts, as a JSON array string in this order. |
 
 ```json
 {
