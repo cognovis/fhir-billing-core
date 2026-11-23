@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.44.0] - 2026-11-23
+
+### Added
+
+- A `contract-participation` rule can require participation in any one of
+  several contracts: it takes exactly one of `contract` (unchanged) and
+  `contracts`, a non-empty array of unique strings without whitespace. A
+  `contracts` rule passes a case whose contracts include any listed entry;
+  otherwise each selected line gets `CONTRACT_PARTICIPATION_REQUIRED` with
+  `details.contracts`, the entries space-separated in configured order. The
+  rules package refuses a rule with both, neither, an empty array, a
+  duplicate, a non-string, an empty or a whitespace-holding entry with a
+  `BillingInputError` naming the rule; the JSON Schema states the same with
+  `oneOf`. The types package exports
+  `BillingContractParticipationParameters`. A `contract` rule decides,
+  reports and digests exactly as on 0.43.0. `BILLING_RULE_CLASS_DEFINITIONS`
+  now lists only `selector` as always required for the class
+  (cognovis/fhir-billing-core#37).
+- Consumer effect: additive. A 0.43.0 or older decoder refuses a
+  `contracts` rule (`contract must be non-empty`) and so fails closed.
+
 ## [0.43.0] - 2026-11-10
 
 ### Changed
