@@ -271,6 +271,20 @@ export interface BillingRuleProvenance {
   readonly note?: string
 }
 
+/**
+ * The parameters of a `contract-participation` rule. Exactly one of `contract` and `contracts` is
+ * present; the rules package refuses a rule with both or neither. `contract` names the one contract
+ * the case must participate in. `contracts` (non-empty, unique, no whitespace in an entry) passes the
+ * rule when the case participates in any one of them; a rejected line's `CONTRACT_PARTICIPATION_REQUIRED`
+ * finding then carries `details.contracts`, the entries space-separated in configured order. A
+ * `contract` rule's finding carries no details. A type alias, so a value of it fits `BillingRule.parameters`.
+ */
+export type BillingContractParticipationParameters = {
+  readonly selector: { readonly system?: string; readonly codes: readonly string[] }
+  readonly contract?: string
+  readonly contracts?: readonly string[]
+}
+
 export interface BillingRule {
   id: string
   class: GenericRuleClass | (string & {})

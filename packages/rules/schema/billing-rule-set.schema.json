@@ -266,17 +266,28 @@
         "examples": [{ "selector": { "codes": ["A100"] }, "attribute": "patient.age", "predicate": { "minimum": 18, "unit": "a" } }]
       },
       "contract-participation": {
-        "description": "Require participation in a configured contract.",
+        "description": "Require participation in a configured contract, or in any one of several.",
         "type": "object",
-        "required": ["selector", "contract"],
+        "required": ["selector"],
+        "oneOf": [{ "required": ["contract"] }, { "required": ["contracts"] }],
         "properties": {
           "selector": { "$ref": "#/$defs/selector" },
-          "contract": { "description": "The contract the case must participate in.", "$ref": "#/$defs/nonEmptyString" },
+          "contract": { "description": "The contract the case must participate in. Exactly one of contract and contracts.", "$ref": "#/$defs/nonEmptyString" },
+          "contracts": {
+            "description": "The contracts of which the case must participate in at least one: unique strings without whitespace. Exactly one of contract and contracts. A rejected line's details name them in contracts, space-separated in this order.",
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^\\S+$" }
+          },
           "countingScope": { "$ref": "#/$defs/countingScope" },
           "exceptWhen": { "$ref": "#/$defs/exceptWhen" },
           "modifierExceptions": { "$ref": "#/$defs/modifierExceptions" }
         },
-        "examples": [{ "selector": { "codes": ["A100"] }, "contract": "example-care-contract" }]
+        "examples": [
+          { "selector": { "codes": ["A100"] }, "contract": "example-care-contract" },
+          { "selector": { "codes": ["A100"] }, "contracts": ["example-care-contract", "example-joining-contract"] }
+        ]
       },
       "contract-code-list": {
         "description": "Reject a line whose code the selected contract does not permit.",

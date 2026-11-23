@@ -382,14 +382,15 @@ Constrain a typed patient attribute by value alternation or by unit-bearing nume
 
 ### `contract-participation`
 
-Require participation in a configured contract.
+Require participation in a configured contract, or in any one of several.
 
 *Open; takes the shared parameters.*
 
 | Parameter | Required | Meaning |
 | --- | --- | --- |
 | `selector` | yes | The codes the rule applies to: literal codes, or "*" as the only code for every code (within system when given). |
-| `contract` | yes | The contract the case must participate in. |
+| `contract` | one of `contract`, `contracts` | The contract the case must participate in. Exactly one of contract and contracts. |
+| `contracts` | one of `contract`, `contracts` | The contracts of which the case must participate in at least one: unique strings without whitespace. Exactly one of contract and contracts. A rejected line's details name them in contracts, space-separated in this order. |
 
 ```json
 {

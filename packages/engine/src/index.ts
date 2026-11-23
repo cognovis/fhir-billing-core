@@ -681,8 +681,16 @@ function evaluateClass(rule: BillingRule, input: BillingCase, lines: readonly Bi
       }
       return []
     }
-    case 'contract-participation':
-      return input.contracts?.includes(String(parameters.contract)) ? [] : findings(lines.map((line) => reason('CONTRACT_PARTICIPATION_REQUIRED', rule, line)))
+    case 'contract-participation': {
+      // Exactly one of `contract` and `contracts`; the rules package refuses any other shape.
+      const contracts = parameters.contracts as readonly string[] | undefined
+      if (contracts === undefined) {
+        return input.contracts?.includes(String(parameters.contract)) ? [] : findings(lines.map((line) => reason('CONTRACT_PARTICIPATION_REQUIRED', rule, line)))
+      }
+      if (contracts.some((contract) => input.contracts?.includes(contract))) return []
+      const details = { contracts: contracts.join(' ') }
+      return findings(lines.map((line) => reason('CONTRACT_PARTICIPATION_REQUIRED', rule, line, details)))
+    }
     case 'contract-code-list': {
       const permitted = parameters.permitted as { system?: string; codes: readonly string[] }
       const listed = (line: BillingLine) => (permitted.system === undefined || permitted.system === line.code.system) && permitted.codes.includes(line.code.code)

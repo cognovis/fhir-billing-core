@@ -19,6 +19,12 @@ test('the reference names every rule class, its parameters and an example', () =
   }
 })
 
+test('a parameter of a oneOf alternative is marked as one of the alternatives, not as optional', () => {
+  const rendered = renderRuleClassReference(schema)
+  assert.ok(rendered.includes('| `contract` | one of `contract`, `contracts` |'), 'contract')
+  assert.ok(rendered.includes('| `contracts` | one of `contract`, `contracts` |'), 'contracts')
+})
+
 test('a README without the markers is refused', () => {
   assert.throws(() => withRuleClassReference('# README\n', 'x'), /markers/)
 })
