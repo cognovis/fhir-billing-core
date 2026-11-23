@@ -26,9 +26,16 @@ function cell(text) {
 /** Selectors are described once by their own row; every other object parameter lists its members, one level deep. */
 const OPAQUE = new Set(['#/$defs/selector', '#/$defs/codeSelector', '#/$defs/alternationMap'])
 
+/** `yes`, `no`, or the parameters of the oneOf alternatives the parameter belongs to. */
+function requirement(definition, name) {
+  if ((definition.required ?? []).includes(name)) return 'yes'
+  const alternatives = (definition.oneOf ?? []).flatMap((alternative) => alternative.required ?? [])
+  return alternatives.includes(name) ? `one of ${alternatives.map((item) => `\`${item}\``).join(', ')}` : 'no'
+}
+
 function rows(schema, name, property, required) {
   const resolved = resolve(schema, property)
-  const row = `| \`${name}\` | ${required ? 'yes' : 'no'} | ${cell(resolved.description ?? '')} |`
+  const row = `| \`${name}\` | ${required} | ${cell(resolved.description ?? '')} |`
   if (OPAQUE.has(property.$ref)) return [row]
   const items = resolved.type === 'array' ? resolve(schema, resolved.items ?? {}) : undefined
   const members = (items ?? resolved).properties
@@ -66,7 +73,6 @@ export function renderRuleClassReference(schema) {
     'A class marked *closed* refuses a parameter it does not list; an *open* class keeps it.',
   ]
   for (const [ruleClass, definition] of Object.entries(classes)) {
-    const required = new Set(definition.required ?? [])
     const own = Object.entries(definition.properties).filter(([name]) => !SHARED.includes(name))
     const example = { id: `example-${ruleClass}`, class: ruleClass, mustUnderstand: true, effect: 'reject', priority: 10, parameters: definition.examples[0] }
     lines.push(
@@ -79,7 +85,7 @@ export function renderRuleClassReference(schema) {
       '',
       '| Parameter | Required | Meaning |',
       '| --- | --- | --- |',
-      ...own.flatMap(([name, property]) => rows(schema, name, property, required.has(name))),
+      ...own.flatMap(([name, property]) => rows(schema, name, property, requirement(definition, name))),
       '',
       '```json',
       compactJson(example),

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { describe, it } from 'node:test'
 import {
+  BILLING_CORE_VERSION,
   BILLING_ARTIFACT_KIND_SYSTEM,
   BILLING_CATALOG_DIGEST_SYSTEM,
   BILLING_CATALOG_EDITION_MIME,
@@ -55,6 +56,8 @@ describe('release contracts', () => {
     for (const consumer of ['scripts/generate-types.mjs', 'scripts/verify-release.mjs']) {
       assert.ok(readFileSync(consumer, 'utf8').includes('assertFshGeneratedFresh()'), `${consumer} must refuse a stale fsh-generated/`)
     }
+    // Results and conformance records report BILLING_CORE_VERSION as engineVersion, the Billing Core release.
+    assert.equal(BILLING_CORE_VERSION, packageVersion)
     for (const directory of ['types', 'rules', 'engine']) {
       const manifest = JSON.parse(readFileSync(`packages/${directory}/package.json`, 'utf8')) as { version?: string; engines?: { node?: string }; publishConfig?: { registry?: string; access?: string; tag?: string } }
       assert.equal(manifest.version, packageVersion)

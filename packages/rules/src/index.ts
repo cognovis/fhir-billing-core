@@ -74,7 +74,7 @@ export const BILLING_RULE_CLASS_DEFINITIONS: Readonly<Record<GenericRuleClass, R
   'bounded-multiplier': { requiredParameters: ['selector', 'minimum'], description: 'Constrain a line multiplier to an inclusive lower bound and an optional inclusive upper bound.' },
   'accompanying-information-required': { requiredParameters: ['selector', 'information'], description: 'Require named accompanying information, optionally drawn from an admissible value alternation.' },
   'patient-attribute-constraint': { requiredParameters: ['selector', 'attribute', 'predicate'], description: 'Constrain a typed patient attribute by value alternation or by unit-bearing numeric bounds.' },
-  'contract-participation': { requiredParameters: ['selector', 'contract'], description: 'Require participation in a configured contract.' },
+  'contract-participation': { requiredParameters: ['selector'], description: 'Require participation in a configured contract, or in any one of several.' },
   'contract-code-list': { requiredParameters: ['selector', 'permitted'], description: 'Reject a line whose code the selected contract does not permit.' },
   'setting-constraint': { requiredParameters: ['selector', 'setting', 'predicate'], description: 'Permit or forbid a service in the billing settings carried by a named case fact.' },
   'prior-authorization-required': { requiredParameters: ['selector', 'authorization', 'grant'], description: 'Require an on-file grant from a named authorization programme.' },
@@ -373,7 +373,17 @@ function assertRuleParameters(rule: BillingRule): void {
       throw new BillingInputError(`Rule ${rule.id} predicate must declare valueIn or a unit-bearing numeric bound.`)
     }
   } else if (rule.class === 'contract-participation') {
-    if (typeof parameters.contract !== 'string' || !parameters.contract) throw new BillingInputError(`Rule ${rule.id} contract must be non-empty.`)
+    const hasContract = parameters.contract !== undefined
+    if (hasContract === (parameters.contracts !== undefined)) throw new BillingInputError(`Rule ${rule.id} must name exactly one of contract and contracts.`)
+    if (hasContract) {
+      if (typeof parameters.contract !== 'string' || !parameters.contract) throw new BillingInputError(`Rule ${rule.id} contract must be non-empty.`)
+    } else {
+      const contracts = parameters.contracts
+      if (!Array.isArray(contracts) || contracts.length === 0) throw new BillingInputError(`Rule ${rule.id} contracts must be a non-empty array.`)
+      // Array.from visits every position, so a hole in a sparse array is refused like any other non-string.
+      if (Array.from(contracts).some((item) => typeof item !== 'string' || !item)) throw new BillingInputError(`Rule ${rule.id} contracts entries must be non-empty strings.`)
+      if (new Set(contracts).size !== contracts.length) throw new BillingInputError(`Rule ${rule.id} contracts must be unique.`)
+    }
   } else if (rule.class === 'contract-code-list') {
     assertSelector(parameters.permitted, `Rule ${rule.id} permitted codes`)
     assertOnlyKeys(parameters.permitted as Record<string, unknown>, ['system', 'codes'], `Rule ${rule.id} permitted codes`)
