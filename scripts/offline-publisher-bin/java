@@ -67,11 +67,16 @@ case "${JAVA_TOOL_OPTIONS:-}" in
 esac
 unset JAVA_TOOL_OPTIONS
 
+# Java4Shell (CVE-2026-114938): HotSpot's AVX-512 VBMI Base64 decoder can write
+# out of bounds. Disable the intrinsic on every exec until a fixed Temurin 21
+# build is in use (expected >= 21.0.13.1 or equivalent); then remove this flag.
+JAVA4SHELL_MITIGATION="-XX:-UseBASE64Intrinsics"
+
 run_publisher_java() {
     if test "$publisher_headless" = true; then
-        exec "$PUBLISHER_JAVA" -Djava.awt.headless=true -Dapple.awt.UIElement=true "$@"
+        exec "$PUBLISHER_JAVA" "$JAVA4SHELL_MITIGATION" -Djava.awt.headless=true -Dapple.awt.UIElement=true "$@"
     fi
-    exec "$PUBLISHER_JAVA" "$@"
+    exec "$PUBLISHER_JAVA" "$JAVA4SHELL_MITIGATION" "$@"
 }
 
 # fhirscripts 0.29.1 require_min_version("17") parses at most three numeric
