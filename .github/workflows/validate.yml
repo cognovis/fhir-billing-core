@@ -103,7 +103,8 @@ jobs:
       - name: Show UseBASE64Intrinsics through the Publisher shim
         run: |
           set -euo pipefail
-          export PUBLISHER_JAVA="$(command -v java)"
+          PUBLISHER_JAVA="$(command -v java)"
+          export PUBLISHER_JAVA
           PATH="$PWD/scripts/offline-publisher-bin:$PATH" java -XX:+PrintFlagsFinal -version 2>&1 | tee "$RUNNER_TEMP/java-flags.txt"
           grep UseBASE64Intrinsics "$RUNNER_TEMP/java-flags.txt"
           grep -E 'UseBASE64Intrinsics[[:space:]]*=[[:space:]]*false' "$RUNNER_TEMP/java-flags.txt"
