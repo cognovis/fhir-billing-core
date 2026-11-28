@@ -59,6 +59,15 @@ jobs:
         with:
           bun-version: latest
 
+      # Temurin 21 for the Java4Shell check below. The IG Publisher itself is
+      # not run here; this job only proves the offline shim disables the
+      # HotSpot Base64 intrinsic (CVE-2026-114938) until a fixed build exists.
+      - name: Install Temurin 21 for the Publisher shim check
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
       - name: Verify version metadata
         run: |
           set -euo pipefail
@@ -87,3 +96,15 @@ jobs:
             -o "$RUNNER_TEMP/actionlint.tar.gz"
           tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
           "$RUNNER_TEMP/actionlint" .github/workflows/*.yml
+
+      # Java4Shell (CVE-2026-114938): Java in this job is started only through
+      # scripts/offline-publisher-bin/java. Remove with the shim flag once
+      # setup-java resolves Temurin >= 21.0.13.1 or equivalent.
+      - name: Show UseBASE64Intrinsics through the Publisher shim
+        run: |
+          set -euo pipefail
+          PUBLISHER_JAVA="$(command -v java)"
+          export PUBLISHER_JAVA
+          PATH="$PWD/scripts/offline-publisher-bin:$PATH" java -XX:+PrintFlagsFinal -version 2>&1 | tee "$RUNNER_TEMP/java-flags.txt"
+          grep UseBASE64Intrinsics "$RUNNER_TEMP/java-flags.txt"
+          grep -E 'UseBASE64Intrinsics[[:space:]]*=[[:space:]]*false' "$RUNNER_TEMP/java-flags.txt"
